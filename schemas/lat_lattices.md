@@ -28,8 +28,9 @@ Label: `dimension.signature.determinant.genus_spec.tiebreaker` where
 | [minimum](https://beta.lmfdb.org/knowledge/show/lattice.minimal_vector) | integer | length of shortest vector (only for definite lattices) |
 | name | text | a string like "E8", often null |
 | [theta_series](https://beta.lmfdb.org/knowledge/show/lattice.theta) | numeric[] | a vector, counting the number of representations of n (odd) or 2n (even) |
-| [gram](https://beta.lmfdb.org/knowledge/show/lattice.gram) | integer[] | Gram matrix (in canonical form, so the knowl should be updated) |
-| [label](https://beta.lmfdb.org/Lattice/Labels) | text | We're changing the label; see below |
+| [gram](https://beta.lmfdb.org/knowledge/show/lattice.gram) | integer[] | A list of human-preferred gram matrices; often there will only be one, but for E8 for example we want to include multiple ones |
+| [canonical_gram] | integer[] | Canonical form for the Gram matrix; currently only available for definite lattices |
+| [label](https://beta.lmfdb.org/Lattice/Labels) | text | We're changing the label; see above |
 | [genus_label](https://beta.lmfdb.org/Lattice/Labels) | text | The part of the label that is constant across a genus |
 | conway_symbol | text | the Conway symbol for the genus |
 | pneighbors | jsonb | a dictionary with primes as keys and a list of labels as values (the p-neighbors) |
