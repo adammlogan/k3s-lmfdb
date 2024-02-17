@@ -226,6 +226,41 @@ def encode_rank(rk):
     return chr(ord('A') + (rk - 10 - 26))
 
 def create_genus_label(genus_sym):
+    '''
+    Returns a string which is the LMFDB label of the genus symbol.
+    Label is in the format r.s.d.j_1.j_2....j_k.x, where 
+    r is the rank of the lattices
+    s is the signature (n_plus - n_minus)
+    d is the determinant
+    If p_1, ... , p_k are the primes whose squares divide 2*d (p_i^2 | 2*d), then
+    j_1,...,j_k are corresponding rank decompositions of their Jordan forms, omitting the first, encoded in base 62
+    (digits 0-9, then lowercase a-z then uppercase A-Z)
+    For example, if the pairs of (valuation, rank) appearing in the decomposition are (3, 1), (4,10), (6,37), 
+    it will be encoded as 01a0B.
+    The last component of the label, x, is a hexadecimal string whose bits represent the local data.
+    Let n_2 be the number of non-zero blocks in the Jordan decomposition at 2.
+    The least n_2 bits specify the types (I or II) of the non-zero blocks at 2.
+    From these, once can deduce the compartments and trains in the local symbol at 2, let c, t be their numbers.
+    The next 3*c bits represent the oddities of the compartments, with every 3 bits giving an oddity mod 8.
+    The next t bits represent the signs of the trains.
+    Finally, for every other prime p dividing d, in increasing order, if there are n_p non-zero blocks in the 
+    Jordan decomposition at p, we add n_p bits representing the signs of these blocks.
+
+    :param genus_sym: GenusSymbol_global_ring
+    :return: str 
+
+    >>> q = QuadraticForm(ZZ,3, [1,0,1,1,0,3]).Hessian_matrix()
+    >>> create_genus_label(Genus(q))
+    '3.3.22.a6'
+
+    >>> s = all_genus_symbols(5,0,2*61)[0]
+    >>> create_genus_label(s)
+    '5.5.122.66'
+
+    >>> s = all_genus_symbols(8,0,2**5*3**4*5**3*7**2,is_even=False)[0]
+    >>> create_genus_label(s)
+    '8.8.15876000.00001.0001.001.01.a267'
+    '''
     rk = genus_sym.rank()
     sig = genus_sym.signature()
     det = genus_sym.determinant()
@@ -276,6 +311,22 @@ def create_genus_label(genus_sym):
     return label
 
 def decode_rank(c):
+    '''
+    Returns a number between 0 and 61, representing a rank of a component in the Jordan decomposition.
+    The number is represented by a character c using 0-9a-zA-Z.
+    
+    :param c: str
+    :return: int
+
+    >>> decode_rank('a')
+    10
+    
+    >>> decode_rank('A')
+    36
+
+    >>> decode_rank('9')
+    9
+    '''
     assert ((ord('0') <= ord(c) <= ord('9')) or (ord('a') <= ord(c) <= ord('z')) or (ord('A') <= ord(c) <= ord('Z')))
     if (ord('0') <= ord(c) <= ord('9')):
         return ord(c) - ord('0')
@@ -285,6 +336,20 @@ def decode_rank(c):
     return ord(c) - ord('A') + 10 + 26
 
 def build_compartments_and_trains(symbols, num_blocks_2, compart_bits):
+    '''
+    Returns two lists of lists. 
+    The first list consists of compartments of the diadic symbol.
+    Here, each compartment is a maximal interval where all factors are of scaled type I.
+    The second list consists of a list of trains of the diadic symbol.
+    Here, each train is a maximal interval having the property that for each pair of adjacent forms
+    at least one is of scaled type I.
+
+    :param symbols: list
+    :param num_blocks_2: int
+    :param compart_bits: list
+    :return: tuple
+
+    '''
     compartments = []
     trains = []
     in_compartment = False
@@ -481,6 +546,9 @@ def conway_symbol_local_part(local_symbol):
     return CS_string
 
 def conway_symbol(genus_symbol):
+    '''
+    Returns the conway symbol string of the genus symbol.
+    '''
     roman_numeral = "II" if genus_symbol.is_even() else  "I"
     r,s = genus_symbol.signature_pair()
     prefix = roman_numeral + "_{" + str(r) + "," + str(s) + "}"
@@ -535,4 +603,64 @@ def create_genus_entry(genus_symbol, hecke_primes=[2]):
     table_row['adjacency_polynomials'] = hecke_polys
     
     return table_row
+
+# The fields here are copied from the schema
+COL_TYPE_LATIICE_GENUS = {'label' : 'text',
+                          'rank'  : 'smallint',
+                          'signature' : 'smallint',
+                          'class_number' : 'smallint',
+                          'det' : 'bigint',
+                          'disc' : 'bigint',
+                          'conway_symbol' : 'text',
+                          'level' : 'bigint',
+                          'is_even' : 'boolean',
+                          'discriminant_group_invs' : 'integer[]',
+                          'discriminant_form' : 'integer[]',
+                          'adjacency_matrix' : 'jsonb',
+                          'adjacency_polynomials' : 'jsonb',
+                          'mass' : 'numeric[]'
+}
+
+def write_header_to_file(fname, sep = "|", col_type=COL_TYPE_LATIICE_GENUS):
+    # we want to have a well defined order, matching the entries
+    fields = sorted(list(col_type.keys()))
+
+    header_lines = [sep.join(fields), sep.join([col_type[k] for k in fields]), ""]
     
+    header = "\n".join(header_lines)
+    
+    f = open(fname, "w")
+    f.write(header)
+    f.close()
+    return
+
+def value_to_postgres(val):
+    if type(val) == list:
+        return str(val).replace('[', '{').replace(']','}')
+    if type(val) == tuple:
+        return str(val).replace('(', '{').replace(')','}')
+    if type(val) == dict:
+        d = {}
+        for k in val.keys():
+            d[str(k)] = val[k]
+        return str(d)
+    if type(val) == bool:
+        return "T" if val else "F"
+    return str(val)
+
+def write_entries_to_file(entries, fname, sep = "|", col_type=COL_TYPE_LATIICE_GENUS):
+    # we want to have a well defined order, matching the entries
+    fields = sorted(list(col_type.keys()))
+    lines = [sep.join([value_to_postgres(entry[k]) for k in fields]) for entry in entries]
+    output = "\n".join(lines)
+    f = open(fname, "a")
+    f.write(output)
+    f.close()
+    return
+
+def write_header_and_entries(entries, fname, sep = "|", col_type=COL_TYPE_LATIICE_GENUS):
+    write_header_to_file(fname, sep = sep, col_type=col_type)
+    write_entries_to_file(entries, fname, sep = sep, col_type=col_type)
+    return
+
+
