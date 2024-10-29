@@ -716,3 +716,56 @@ def write_all_up_to_det(rank, det):
         n_plus = rank - n_minus
         print("signature = (%s,%s)" %(n_plus, n_minus))
         write_all_of_sig_up_to_det(n_plus, n_minus, det)
+
+    return
+
+def determinant_condition(sp, det):
+    p = sp.prime()
+    sgn = prod([x[2] for x in sp.symbol_tuple_list()])
+    _, a = det.val_unit(p)
+    return kronecker(sgn,p) == a.kronecker(p)
+
+def oddity_condition(genus_symbol):
+    s = genus_symbol
+    s2 = s.local_symbol(2)
+    oddity_s = oddity(s2.symbol_tuple_list())
+    excess = sum([sp.excess() for sp in s.local_symbols() if sp.prime() != 2])
+    return (s.signature() + excess - oddity_s) % 8 == 0
+
+def jordan_condition(genus_symbol):
+    s2 = genus_symbol.local_symbol(2)
+    tups = s2.symbol_tuple_list()
+    for t in tups:
+        n = t[1]
+        d = t[2]
+        s = t[3]
+        o = t[4]
+        if n == 0:
+           if (s == 1) or (d in [3,5]):
+               return false
+        if n == 1:
+            if (d in [1,7]) and (o not in [1,7]):
+                return false
+            if (d in [3,5]) and (o not in [3,5]):
+                return false
+        if (n == 2) and (s == 1):
+            if (d in [1,7]) and (o not in [0,4,6]):
+                return false
+            if (d in [3,5]) and (o not in [2,4,6]):
+                return false    
+        if (n > 2):
+            if ((o - n) % 2 != 0):
+                return false
+            if (s == 0) and (o != 0):
+                return false
+    return true
+
+def check_genus_symbol(genus_symbol):
+    jordan = jordan_condition(genus_symbol)
+    odd = oddity_condition(genus_symbol)
+    ls = genus_symbol.local_symbols()
+    det = genus_symbol.determinant()
+    det_conds = [(sp.prime(), determinant_condition(sp, det)) for sp in ls]
+    return det_conds, odd, jordan
+
+# (Working on code for filling all the entries in lat_lattices and lat_genera)
