@@ -1,14 +1,15 @@
 import os
 from functools import reduce
 
-from sage.rings.integer_ring import ZZ
+from sage.arith.misc import kronecker, prime_divisors
 from sage.combinat.integer_vector_weighted import WeightedIntegerVectors
-from sage.arith.misc import prime_divisors
+from sage.interfaces.magma import magma
+from sage.matrix.constructor import matrix
+from sage.misc.functional import is_even, is_odd
 from sage.misc.misc_c import prod
 from sage.quadratic_forms.genera.genus import Genus_Symbol_p_adic_ring
 from sage.quadratic_forms.genera.genus import GenusSymbol_global_ring
-from sage.interfaces.magma import magma
-from sage.matrix.constructor import matrix
+from sage.rings.integer_ring import ZZ
 
 def get_product(set_list):
     '''
@@ -118,7 +119,7 @@ def get_unique(symbs):
         symb_dict[tuple(listify_symbol(s))] = i
     return [symbs[i] for i in symb_dict.values()]
 
-def all_diadic_genus_symbols(n_plus, n_minus, det, odd_symbols, is_even=True):
+def all_dyadic_genus_symbols(n_plus, n_minus, det, odd_symbols, only_even=True):
     '''
     Returns all the possible 2-adic genus symbols of a global genus symbol having a signature (n_plus, m_minus),
     determinant det and p-adic genus symbols odd_symbols at the odd primes p dividing the determinant
@@ -143,7 +144,7 @@ def all_diadic_genus_symbols(n_plus, n_minus, det, odd_symbols, is_even=True):
             comps = []
             for block in blocks:
                 oddities = []
-                if (block[0] == 0) and is_even:
+                if (block[0] == 0) and only_even:
                     # if the scaling is trivial and we want an even lattice, we cannot have any oddity
                     oddities = [[0,0]]
                 elif block[1] == 1:
@@ -166,18 +167,18 @@ def all_diadic_genus_symbols(n_plus, n_minus, det, odd_symbols, is_even=True):
                 if (oddity(cmps) - exp_oddity) % 8 == 0:
                     symbs.append(cmps)
     gen_symbs = [Genus_Symbol_p_adic_ring(p,symb) for symb in symbs]
-    if is_even:
+    if only_even:
         assert all([s.is_even() for s in gen_symbs])
     return get_unique(gen_symbs)
 
-def all_genus_symbols(n_plus, n_minus, det, is_even=True):
+def all_genus_symbols(n_plus, n_minus, det, only_even=True):
     '''
     Returns all the genus symbols of even lattices with signature (n_plus, n_minus) and determinant det
 
     :param n_plus: int
     :param n_minus: int
     :param det: int
-    :param is_even: bool
+    :param only_even: bool
     :return: list
 
     >>> all_genus_symbols(16,0,1)
@@ -186,7 +187,7 @@ def all_genus_symbols(n_plus, n_minus, det, is_even=True):
     Signature:  (16, 0)
     Genus symbol at 2:    1^16]
 
-    >>> all_genus_symbols(16,0,1,is_even=False)
+    >>> all_genus_symbols(16,0,1,only_even=False)
     [Genus of
     None
     Signature:  (16, 0)
@@ -202,14 +203,18 @@ def all_genus_symbols(n_plus, n_minus, det, is_even=True):
     >>> [len(all_genus_symbols(17,0,2*D)) for D in range(1,10)]
     [1, 1, 1, 3, 1, 2, 1, 3, 3]
     '''
+    if is_odd(n_minus) and (det > 0):
+        return []
+    if is_even(n_minus) and (det < 0):
+        return []
     rank = n_plus + n_minus
     primes = ZZ(2*det).prime_divisors()
     odd_primes = primes[1:]
     global_symbs = []
     odd_symbs = get_product([all_local_genus_symbols(rank, det, p) for p in odd_primes])
     for odd_symbols in odd_symbs:
-        diadic = all_diadic_genus_symbols(n_plus, n_minus, det, odd_symbols, is_even=is_even)
-        for symb2 in diadic:
+        dyadic = all_dyadic_genus_symbols(n_plus, n_minus, det, odd_symbols, only_even=only_even)
+        for symb2 in dyadic:
             g = GenusSymbol_global_ring((n_plus, n_minus), [symb2] + odd_symbols)
             global_symbs.append(g)
     return global_symbs
@@ -255,7 +260,7 @@ def create_genus_label(genus_sym):
     >>> create_genus_label(s)
     '5.5.122.66'
 
-    >>> s = all_genus_symbols(8,0,2**5*3**4*5**3*7**2,is_even=False)[0]
+    >>> s = all_genus_symbols(8,0,2**5*3**4*5**3*7**2,only_even=False)[0]
     >>> create_genus_label(s)
     '8.8.15876000.00001.0001.001.01.a267'
     '''
@@ -336,9 +341,9 @@ def decode_rank(c):
 def build_compartments_and_trains(symbols, num_blocks_2, compart_bits):
     '''
     Returns two lists of lists. 
-    The first list consists of compartments of the diadic symbol.
+    The first list consists of compartments of the dyadic symbol.
     Here, each compartment is a maximal interval where all factors are of scaled type I.
-    The second list consists of a list of trains of the diadic symbol.
+    The second list consists of a list of trains of the dyadic symbol.
     Here, each train is a maximal interval having the property that for each pair of adjacent forms
     at least one is of scaled type I.
 
@@ -396,7 +401,7 @@ def genus_symbol_from_label(label):
     :param label: str
     :return: GenusSymbol_global_ring
 
-    >>> all_syms = all_genus_symbols(8,0,2**5*3**4*5**3*7**2,is_even=False)
+    >>> all_syms = all_genus_symbols(8,0,2**5*3**4*5**3*7**2,only_even=False)
     >>> all([genus_symbol_from_label(create_genus_label(s)) == s for s in all_syms])
     True
     '''
@@ -466,7 +471,7 @@ def genus_symbol_from_label(label):
 # This is based on the __repr__ method from local symbols
 # !! TODO !! - should refactor the code there and then use it
 
-def conway_symbol_diadic(local_symbol):
+def conway_symbol_dyadic(local_symbol):
     CS = local_symbol.canonical_symbol()
     trains = local_symbol.trains()
     comps = local_symbol.compartments()
@@ -702,9 +707,10 @@ def write_all_of_sig_up_to_det(n_plus, n_minus, det):
         os.makedirs("data")
     fname = "data/genera_signature_%s_%s_%s.tbl" % (n_plus, n_minus, det)
     write_header_to_file(fname)
+    sgn = 1 if is_even(n_minus) else -1;
     for d in range(1, det+1):
-        print("determinant = %s" % d)
-        syms = all_genus_symbols(n_plus, n_minus, d, is_even=False)
+        print("determinant = %s" % (sgn*d))
+        syms = all_genus_symbols(n_plus, n_minus, sgn*d, only_even=False)
         entries = [create_genus_entry(s) for s in syms]
         write_entries_to_file(entries, fname)
 
