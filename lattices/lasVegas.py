@@ -125,16 +125,52 @@ def dyadicBlockRepresentative(globalGenus):
                     blocks.append(matrix(ZZ,[[powTwo*item]]))
     return blocks
 
-def primitiveRepresentationTypeII(binaryTypeII, t):
-    """binaryTypeII: two by two type II matrix"""
-    l = binaryTypeII[1,0].valuation(2)
+def primitiveRepresentationTypeII(binaryTypeII, unreducedT, unreducedK):
+    """binaryTypeII: two by two type II matrix
+    unreducedT: integer
+    unreducedK: positive integer
+
+    returns primitive representation of unreducedT by binaryTypeII mod 2^unreducedK as a pair (x1,x2)
+    
+    see lemma 17 of DH14b"""
+    l = binaryTypeII[1,0].valuation(2)+1
     reducedMatrix = binaryTypeII/2**l
     assert reducedMatrix[0,0] in ZZ
     assert reducedMatrix[1,1] in ZZ
-    reducedT = t/2**l
-    assert reducedT.valuation(2) == 1
+    a = reducedMatrix[0,0]
+    b = 2*reducedMatrix[1,0]
+    c = reducedMatrix[1,1]
+    t = unreducedT/2**l
+    k = unreducedK - l
+    assert k>0
+    assert t.valuation(2) == 0
 
-    #TODO
+    #variables are now as written in lemma 17 of DH14b
+
+    #determine parities of x1,x2 as a1, a2
+    if a%2 == c%2: #x+1+x == 1 (mod 2)
+        y1 = ZZ(1)
+        y2 = ZZ(1)
+    elif a%2 == 1: #1+0+0 == 1 (mod 2)
+        y1 = ZZ(1)
+        y2 = ZZ(0)
+    else: #0+0+1 == 1 (mod 2)
+        y1 = ZZ(0)
+        y2 = ZZ(1)
+
+    if y1 == 1:
+        for i in range(1,k):
+            #right now, (y1,y2) represents t mod 2^i, so we need to lift so it represents mod 2^(i+1)
+            y2 += (t-(a*y1*y1 + b*y1*y2 + c*y2*y2)) % 2**(i+1)
+    elif y1 == 0:
+        for i in range(1,k):
+            y1 += (t-(a*y1*y1 + b*y1*y2 + c*y2*y2)) % 2**(i+1)
+    
+
+    value = binaryTypeII[0,0]*y1**2 + binaryTypeII[0,1]*2*y1*y2 + binaryTypeII[1,1]*y2**2
+    assert (value - unreducedT)%2**unreducedK == 0, \
+        f"Wrong representation, {binaryTypeII[0,0]}*{y1}^2 + {2*binaryTypeII[0,1]}*{y1}*{y2} + {binaryTypeII[1,1]}*{y2}^2 == {value} (mod 2^{unreducedK}), expected {unreducedT}"
+    return (y1,y2)
 
 def twoSquaresSumToNonsquare(primePower, nonsquare, randomThreshold = 40):
     """primePower: an ODD prime power
@@ -160,13 +196,44 @@ def twoSquaresSumToNonsquare(primePower, nonsquare, randomThreshold = 40):
     b = sqrt(R(nonsquare-a**2))
     return (a,b)
 
+def theorem10Lift(Q, t, x, p, i, k):
+    """Q = gram matrix of quadratic form
+    x = n-dimensional vector of integers (matrix type_)
+    p = prime
+    t = integer
+    i = s.t. p^i is initial precision of representation
+    k = required outputted precision
+    
+    outputs an n-dimensional p^k vector that is a p^k representation of t"""
+    assert k >= i
+    a = (x.transpose()*Q*x)[0,0]
+    R = Zmod(p**k)
+    # print(a,t)
+    # print(type(a),type(t))
+    # print(a/t)
+    u = sqrt(R(t/a))
+    result = u*x
+    # print(f"Lifted {x} to {result}")
+    # assert R(t) == (result.transpose()*matrix(R, Q)*result)[0,0], f"{R(t)} =/= {(result.transpose()*matrix(R, Q)*result)[0,0]} (mod {p}^{k})"
+    return u*x
 
-def primitiveRepresentationOddPrimes(tau1, tau2unreduced, p, tUnreduced, Kp):
+def primitiveRepresentationOddPrimes(tau1, tau2unreduced, tUnreduced, p, Kp):
+    """tau1 = element of Z/(Kp)Z with valuation 0
+    tau2unreduced = element of Z/(Kp)Z with even valuation
+    tUnredeuced = element of Z/(Kp)Z with same valuation as tau2unreduced, also prime part of tUnreduced has opposite legendre as tau1
+    p = some prime
+    Kp = integer
+
+    Returns a tuple pair (x1,x2) such that tUnreduced = (tau1)(x1^2) + (tau2unreduced)(x2^2)
+
+    See lemma 25
+    """
     assert tau2unreduced.valuation(p) == tUnreduced.valuation(p)
     assert tau1.valuation(p) == 0
     i = tau2unreduced.valuation(p)
     assert i%2 == 0
-    tau2= tau2/p**i
+    assert i < Kp, "valuation of tau2 is too high"
+    tau2= tau2unreduced/p**i
     t = tUnreduced/p**(tUnreduced.valuation(p))
     assert kronecker(t,p) != kronecker(tau1, p)
 
@@ -178,9 +245,24 @@ def primitiveRepresentationOddPrimes(tau1, tau2unreduced, p, tUnreduced, Kp):
         return (0,sqrt(ZpKpZ(t*inverse_mod(tau2,p**Kp))))
     
     y1, noty2 = twoSquaresSumToNonsquare(p, ZpZ(t)/ZpZ(tau1))
-    y2 = noty2*sqrt(Zpz(tau1)/Zpz(tau2))
-    
-    
+    y2 = noty2*sqrt(ZpZ(tau1)/ZpZ(tau2))
+
+    x1, x2 = ZZ(y1*p**(i/2)), ZZ(y2)
+    assert((tau1*x1**2 + tau2unreduced*x2**2 - tUnreduced)%p**(i+1) == 0)
+
+    form = matrix(ZZ, [[tau1, 0],
+                        [0, tau2unreduced]])
+    rep = matrix(ZZ, [[x1],
+                      [x2]])
+    liftedPair = theorem10Lift(form, tUnreduced, rep, p, i+1, Kp)
+    lx1, lx2 = ZZ(liftedPair[0,0]), ZZ(liftedPair[1,0])
+
+    total = (tau1*lx1**2 + tau2unreduced*lx2**2) % p**(Kp)
+    assert (total - tUnreduced)%p**(Kp) == 0, \
+        f"Incorrectly generated primitive representation: {tau1}*{lx1}^2 + {tau2unreduced}*{lx2}*2 == {total} (mod {p}^{Kp}), \n\
+            expected {tUnreduced}"
+    return (lx1,lx2)
+
 def crtMatrix(congruences):
     """congruences: List of ordered pairs (modulus, matrix mod modulus)"""
     modulus = LCM_list([i[0] for i in congruences])
@@ -660,7 +742,8 @@ if __name__ == "__main__":
     #                       1, 3, 0, 24, 0,
     #                       4, 0, 0, 0, 30])
 
-
+    # TEST IF GENERATION OF (DYADIC) BLOCK DIAGONAL MATRIX REPRESENTATIVE OF GENUS WORKS
+    #
     # A = matrix(ZZ, [[64,0,0,0,0,0,0,0,4],
     #                 [0,2,0,2,0,1,0,3,0],
     #                 [0,0,3,0,0,0,0,0,0],
@@ -675,8 +758,20 @@ if __name__ == "__main__":
     # dyadicRep = block_diagonal_matrix(dyadicBlockRepresentative(inputGenus))
     # print(Genus(dyadicRep))
 
-    print(factor(625))
-    print(twoSquaresSumToNonsquare(625,69))
+
+
+    # TEST IF GENERATION OF REPRESENTATIVE OF t BY tau1 x1^2 + tau2 x2^2 (mod p) WORKS (SEE FUNCTION DECSRIPTION FOR PRECONDITIONS)
+    # for i in range(10000):
+    #     print(primitiveRepresentationOddPrimes(ZZ(5), ZZ(363), ZZ(242), ZZ(11), ZZ(3)))
+
+
+
+    #TEST IF GENERATION OF REPRESENTATIVE OF t by ax^2 + bxy + cy^2 (mod 2^k) works (SEE FUNCTION DESCRIPTION FOR PRECONDITIONS)
+    typeII = matrix(ZZ, [[10, 5],
+                         [5, 10]])
+    print(primitiveRepresentationTypeII(typeII, ZZ(50), ZZ(7)))
+
+
 
 
     # print(f"OUTPUT: {dubeyHolensteinLatticeRepresentative(inputGenus)} \n_________")
