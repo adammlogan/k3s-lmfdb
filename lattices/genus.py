@@ -665,6 +665,7 @@ COL_TYPE_LATIICE_GENUS = {'label' : 'text',
                           'is_even' : 'boolean',
                           'discriminant_group_invs' : 'integer[]',
                           'discriminant_form' : 'integer[]',
+                          'rep' : 'integer[]', # We add this one as input for fill_genus.m
                           #'adjacency_matrix' : 'jsonb',
                           #'adjacency_polynomials' : 'jsonb',
                           #'mass' : 'numeric[]',
