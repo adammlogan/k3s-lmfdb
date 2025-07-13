@@ -19,6 +19,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.structure.factorization_integer import IntegerFactorization
 from random import randint
 from math import prod
+from itertools import product
 
 def nonQuadraticResidue(p, randomThreshold = 40):
     """p: ODD prime
@@ -125,10 +126,10 @@ def dyadicBlockRepresentative(globalGenus):
                     blocks.append(matrix(ZZ,[[powTwo*item]]))
     return blocks
 
-def primitiveRepresentationTypeII(binaryTypeII, unreducedT, unreducedK):
+def primitiveRepresentationTypeII(binaryTypeII, tUnreduced, kUnreduced):
     """binaryTypeII: two by two type II matrix
-    unreducedT: integer
-    unreducedK: positive integer
+    tUnreduced: integer
+    kUnreduced: positive integer
 
     returns primitive representation of unreducedT by binaryTypeII mod 2^unreducedK as a pair (x1,x2)
     
@@ -140,8 +141,8 @@ def primitiveRepresentationTypeII(binaryTypeII, unreducedT, unreducedK):
     a = reducedMatrix[0,0]
     b = 2*reducedMatrix[1,0]
     c = reducedMatrix[1,1]
-    t = unreducedT/2**l
-    k = unreducedK - l
+    t = tUnreduced/2**l
+    k = kUnreduced - l
     assert k>0
     assert t.valuation(2) == 0
 
@@ -168,8 +169,8 @@ def primitiveRepresentationTypeII(binaryTypeII, unreducedT, unreducedK):
     
 
     value = binaryTypeII[0,0]*y1**2 + binaryTypeII[0,1]*2*y1*y2 + binaryTypeII[1,1]*y2**2
-    assert (value - unreducedT)%2**unreducedK == 0, \
-        f"Wrong representation, {binaryTypeII[0,0]}*{y1}^2 + {2*binaryTypeII[0,1]}*{y1}*{y2} + {binaryTypeII[1,1]}*{y2}^2 == {value} (mod 2^{unreducedK}), expected {unreducedT}"
+    assert (value - tUnreduced)%2**kUnreduced == 0, \
+        f"Wrong representation, {binaryTypeII[0,0]}*{y1}^2 + {2*binaryTypeII[0,1]}*{y1}*{y2} + {binaryTypeII[1,1]}*{y2}^2 == {value} (mod 2^{kUnreduced}), expected {tUnreduced}"
     return (y1,y2)
 
 def twoSquaresSumToNonsquare(primePower, nonsquare, randomThreshold = 40):
@@ -205,7 +206,8 @@ def theorem10Lift(Q, t, x, p, i, k):
     k = required outputted precision
     
     outputs an n-dimensional p^k vector that is a p^k representation of t"""
-    assert k >= i
+    if k<i:
+        return x
     a = (x.transpose()*Q*x)[0,0]
     R = Zmod(p**k)
     # print(a,t)
@@ -262,6 +264,45 @@ def primitiveRepresentationOddPrimes(tau1, tau2unreduced, tUnreduced, p, Kp):
         f"Incorrectly generated primitive representation: {tau1}*{lx1}^2 + {tau2unreduced}*{lx2}*2 == {total} (mod {p}^{Kp}), \n\
             expected {tUnreduced}"
     return (lx1,lx2)
+
+def primitiveRepresentationFourTypeI(tauUnreduced, tUnreduced, k):
+    """tauUnreduced: list of four integers tau1, ..., tau4 s.t. v2(tau1)≤v2(tau2)≤v2(tau3)≤'vtau(4)
+    kUnreduced: positive integer
+    
+    see lemma 24"""
+    i = [entry.valuation(2) for entry in tauUnreduced]
+    tau = [entry/2**i[j] for j, entry in enumerate(tauUnreduced)]
+    assert i[0] <= i[1] <= i[2] <= i[3]
+    t = tUnreduced/2**i[3]
+    assert t.valuation(2) == 0
+
+    reducedCoefficients = [2**((i[3]-i[j])%2) * tau[j] for j in range(3)]+[tau[3]]
+    reducedK = k/2**(i[3])
+    allReps = list(product(*[[0,1,2,3],[0,1,2,3],[0,1,2,3],[1,3]]))
+    repFound = False
+    for reducedRep in allReps:
+        if (sum([reducedCoefficients[j]*reducedRep[j]**2 for j in range(4)]) - t)%16 == 0:
+            repFound = True
+            break
+    assert repFound, f"exhaustive search failed: no valid representation of {reducedCoefficients} (mod 16) found"
+    assert (sum([reducedCoefficients[j]*reducedRep[j]**2 for j in range(4)])-t)%16 ==0, f"Wrong reduced representation"
+    print(reducedCoefficients)
+    print(reducedRep)
+    print(t)
+
+    repList = [reducedRep[j]*2**ceil((i[3]-i[j])/2) for j in range(3)]+[reducedRep[3]]
+
+    form = matrix(ZZ, [[2**i[0]*tau[0], 0, 0, 0],
+                       [0, 2**i[1]*tau[1], 0, 0],
+                       [0, 0, 2**i[2]*tau[2], 0],
+                       [0, 0, 0, 2**i[3]*tau[3]]])
+    rep = matrix(ZZ, [[repList[j]] for j in range(4)])
+
+    
+    unreducedRep = theorem10Lift(form, tUnreduced, rep, 2, i[3]+4, k)
+    assert (sum([tauUnreduced[j]*unreducedRep[j,0]**2 for j in range(4)])-tUnreduced)%(2**k) == 0, f"Representation of \n{unreducedRep} is wrong."
+
+    return [unreducedRep[j,0] for j in range(4)]
 
 def crtMatrix(congruences):
     """congruences: List of ordered pairs (modulus, matrix mod modulus)"""
@@ -683,9 +724,7 @@ def findChangeOfBasisModPrimePower(p, k, M1, M2):
     M2 is a square matrix of rank n (same as M1)
     
     returns a matrix U s.t. U^T M1 U == M2 (mod p^k)"""
-
-
-
+    pass
 
 def dubeyHolensteinLatticeRepresentative(globalGenus):
     """globalGenus: sage GenusSymbol_global_ring object
@@ -767,12 +806,14 @@ if __name__ == "__main__":
 
 
     #TEST IF GENERATION OF REPRESENTATIVE OF t by ax^2 + bxy + cy^2 (mod 2^k) works (SEE FUNCTION DESCRIPTION FOR PRECONDITIONS)
-    typeII = matrix(ZZ, [[10, 5],
-                         [5, 10]])
-    print(primitiveRepresentationTypeII(typeII, ZZ(50), ZZ(7)))
+    # typeII = matrix(ZZ, [[10, 5],
+    #                      [5, 10]])
+    # print(primitiveRepresentationTypeII(typeII, ZZ(50), ZZ(7)))
 
 
 
+    #TEST IF GENERATION OF REPRESENTATIVE OF t BY tau1 x1^2 + ... + tau4x4^2 (mod 2^k) WORKS (SEE FUNCTION DESCRIPTION FOR PRECONDITIONS)
+    print(primitiveRepresentationFourTypeI([ZZ(99), ZZ(304), ZZ(112), ZZ(192)], ZZ(64), ZZ(12)))
 
     # print(f"OUTPUT: {dubeyHolensteinLatticeRepresentative(inputGenus)} \n_________")
 
