@@ -11,12 +11,15 @@ from sage.misc.functional import is_even, is_odd
 from sage.misc.misc_c import prod
 from sage.quadratic_forms.genera.genus import Genus_Symbol_p_adic_ring
 from sage.quadratic_forms.genera.genus import GenusSymbol_global_ring
+from sage.quadratic_forms.genera.genus import is_GlobalGenus, is_2_adic_genus
+from sage.quadratic_forms.genera.genus import LocalGenusSymbol
 from sage.rings.integer_ring import ZZ
 from sage.rings.integer import Integer
 from sage.modules.free_quadratic_module import FreeQuadraticModule_submodule_with_basis_pid, FreeQuadraticModule
 from sage.modules.free_quadratic_module_integer_symmetric import IntegralLattice, local_modification
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.structure.factorization_integer import IntegerFactorization
+from sage.quadratic_forms.genera.normal_form import p_adic_normal_form
 from random import randint
 from math import prod
 from itertools import product
@@ -64,6 +67,7 @@ def oddPrimeDiagonalRepresentative(globalGenus, p, k = None):
 
             if k != None and len(returnList) >= k: #if we've found enough terms
                 break
+
         return returnList
     
     else: #case 1
@@ -74,6 +78,8 @@ def oddPrimeDiagonalRepresentative(globalGenus, p, k = None):
 
 def dyadicBlockRepresentative(globalGenus):
     dyadicTupleList = globalGenus.local_symbol(2).symbol_tuple_list()
+    # dyadicTupleList.sort(key=lambda row: row[0])
+    # print(dyadicTupleList)
     blocks = []
     Tplus = matrix(ZZ, 2, 2, [2, 1, 1, 4]) #TODO: optimize by leaving these pre-defined
     Tminus = matrix(ZZ, 2, 2, [2, 1, 1, 2])
@@ -244,7 +250,9 @@ def primitiveRepresentationOddPrimes(tau1, tau2unreduced, tUnreduced, p, Kp):
     ZpZ = Zmod(p)
 
     if kronecker(t,p) == kronecker(tau2,p):
-        return (0,sqrt(ZpKpZ(t*inverse_mod(tau2,p**Kp))))
+        # print(tau2)
+        # print(p)
+        return (0,sqrt(ZpKpZ(t)/ZpKpZ(tau2)))
     
     y1, noty2 = twoSquaresSumToNonsquare(p, ZpZ(t)/ZpZ(tau1))
     y2 = noty2*sqrt(ZpZ(tau1)/ZpZ(tau2))
@@ -286,9 +294,6 @@ def primitiveRepresentationFourTypeI(tauUnreduced, tUnreduced, k):
             break
     assert repFound, f"exhaustive search failed: no valid representation of {reducedCoefficients} (mod 16) found"
     assert (sum([reducedCoefficients[j]*reducedRep[j]**2 for j in range(4)])-t)%16 ==0, f"Wrong reduced representation"
-    print(reducedCoefficients)
-    print(reducedRep)
-    print(t)
 
     repList = [reducedRep[j]*2**ceil((i[3]-i[j])/2) for j in range(3)]+[reducedRep[3]]
 
@@ -310,9 +315,9 @@ def crtMatrix(congruences):
     width = congruences[0][1].ncols()
     height = congruences[0][1].nrows()
     returnMatrix = zero_matrix(ZZ, height, width)
-    for col in width:
-        for row in height:
-            returnMatrix[row, col] = crt([(congruences[i][0], congruences[i][1][row, col]) for i in range(len(congruences))])
+    for col in range(width):
+        for row in range(height):
+            returnMatrix[row, col] = crt([congruences[i][1][row, col] for i in range(len(congruences))], [congruences[i][0] for i in range(len(congruences))])
     return returnMatrix
 
 def bar(k):
@@ -379,6 +384,21 @@ def solveDirichlet(congruences, cut = 10000):
         raise Exception(f"Dirichlet theorem prime not found within first {cut} trials")
     return checkingNum
 
+def computeChangeOfVariables(Htild, H, q):
+    """returns a matrix U such that Htild == U^T HU (mod q)"""
+    crtList = []
+    for p, e in q.factor():
+        D1, U1 = p_adic_normal_form(H,p, precision=e)
+        D2, U2 = p_adic_normal_form(Htild,p, precision=e)
+        assert D1 == D2, f"Inputted forms are not isomorphic modulo {p}^{e}."
+        U = U1.transpose()*U2.transpose().inverse()
+        assert matrix(Zmod(p**e), U.transpose()*H*U) == matrix(Zmod(p**e), Htild), f"generated wrong U modulo {p}^{e}"
+        crtList.append((p**e, matrix(ZZ,U)))
+
+    returnU = crtMatrix(crtList)
+    assert matrix(Zmod(q), returnU.transpose()*H*returnU) == matrix(Zmod(q), Htild)
+    return returnU
+
 def getE2S2type(globalGenus):
     """globalGenus: sage GenusSymbol_global_ring object; degree at least 4
     
@@ -400,7 +420,7 @@ def getE2S2type(globalGenus):
             c = block[1,1]
             e2 = b.valuation(2) + 1
 
-            if a.valuation(2) < c.valuation(2):
+            if a.valuation(2) > c.valuation(2):
                 block[0,0] = c
                 block[1,1] = a
             
@@ -410,7 +430,6 @@ def getE2S2type(globalGenus):
             return (e2, blockDiagonalList, 2)
     if not existsTypeIIconstituent: #all constituents are type I
         e2 = blockDiagonalList[3][0,0].valuation(2)
-
         firstFour = blockDiagonalList[:4] #as specified on pg 34
         return (e2, firstFour[::-1] + blockDiagonalList[4:], 1)
 
@@ -505,9 +524,9 @@ def primitivelyRepresentedTWithRepresentations(globalGenus):
             oddPrimeRepresentedByFirstEntry.append(False)
 
             opsp = oddPrimesSelectedPair[i]
-            if opsp[i] == (0,1):
+            if opsp == (0,1):
                 missing = 2
-            elif opsp[i] == (1,2):
+            elif opsp == (1,2):
                 missing = 0
             else:
                 missing = 1
@@ -516,7 +535,7 @@ def primitivelyRepresentedTWithRepresentations(globalGenus):
             SOddPrimes.append(diagonal_matrix(ZZ, newdiagonal))
 
     #step vi: finish
-    t =  prod([p**eOddPrimes[i] for i,p in enumerate(relevantOddPrimes)]) * multiplySign * 2**(e2%2)
+    t =  prod([p**eOddPrimes[i] for i,p in enumerate(relevantOddPrimes)]) * multiplySign * 2**e2
 
     representations = []
     #lol jk step 68: find x, A for p = 2
@@ -537,6 +556,7 @@ def primitivelyRepresentedTWithRepresentations(globalGenus):
                          [Abottom]])
         
     assert matrix(Zmod(2**K2),x.transpose()*S2*x)[0,0] == Zmod(2**K2)(t)
+    assert block_matrix(Zmod(2**K2),[[x,A2]]).determinant() == Zmod(2**K2)(1)
 
     representations.append((2, S2, x,A2))
 
@@ -546,17 +566,18 @@ def primitivelyRepresentedTWithRepresentations(globalGenus):
         Kp = eOddPrimes[i]*(n-1)+det.valuation(p)+1
         R = Zmod(p**Kp)
         if oddPrimeRepresentedByFirstEntry[i]: #if we can represent w/ first entry in S
-            firstVar = ZZ(sqrt(R(t)/R(S[0,0])))
+            # print(f"t: {t}, p: {p}, S:\n{S}")
+            firstVar = ZZ(sqrt(R(t/S[0,0])))
             x = matrix(ZZ,[[firstVar]]+[[0] for i in range(n-1)])
             Atop = matrix(ZZ, [[0 for i in range(n-1)]])
             Abottom = diagonal_matrix(ZZ, [ZZ(R(1)/R(firstVar))]+[1 for i in range(n-2)])
             A = block_matrix([[Atop],
                               [Abottom]])
         else: #we can represent w/ first two entries in S
-            d1 = S[0]
-            d2 = S[1]
+            d1 = S[0,0]
+            d2 = S[1,1]
             commonFactor = p**d2.valuation(p)
-            x1,x2 = primitiveRepresentationOddPrimes(d2/commonFactor, d1/commonFactor, t/commonFactor, p, Kp)
+            x2,x1 = primitiveRepresentationOddPrimes(d2/commonFactor, d1/commonFactor, t/commonFactor, p, Kp)
             x = matrix(ZZ, [[x1],[x2]]+[[0] for i in range(n-2)])
             Atop = matrix(ZZ, [[0 for i in range(n-1)]])
             Abottom = diagonal_matrix(ZZ, [ZZ(R(1)/R(x1))]+[1 for i in range(n-2)])
@@ -757,20 +778,12 @@ def primitivelyRepresentedIntegerAlmostDividingDetForRankTwoTypeIOdd(globalGenus
     evenPrimitiveTest = globalGenus.local_symbol(2).canonical_symbol()[0][3] == 0 #first (only) constituent is even
     assert all(oddPrimitiveTest) and evenPrimitiveTest, "not a reduced symbol"
 
-def findChangeOfBasisModPrimePower(p, k, M1, M2):
-    """p is a prime
-    k is a positive integer exponent
-    M1 is a square matrix of some rank n
-    M2 is a square matrix of rank n (same as M1)
-    
-    returns a matrix U s.t. U^T M1 U == M2 (mod p^k)"""
-    pass
-
 def dubeyHolensteinLatticeRepresentative(globalGenus):
     """globalGenus: sage GenusSymbol_global_ring object
 
     Returns a lattice in the genus
     """
+    global B #TODO delete
 
     n = globalGenus.dimension()
     det = globalGenus.determinant()
@@ -779,21 +792,56 @@ def dubeyHolensteinLatticeRepresentative(globalGenus):
     signaturePair = globalGenus.signature_pair()
 
     if n<=3:
-        return globalGenus.representative() #TODO lol oops
+        returnMatrix = globalGenus.representative() #TODO lol oops
+        assert Genus(returnMatrix) == globalGenus
+        return returnMatrix
     
     reducedGenus, gcdOfGenus = reduceGenus(globalGenus)
+    det = reducedGenus.determinant()
     relevantPrimes = (2*det).prime_divisors()
 
     t,q,representations = primitivelyRepresentedTWithRepresentations(reducedGenus)
     localSyms = []
+
+    dCongruenceList = []
+    hCongruenceList = []
+    xCongruenceList = [] #for debugging purposes TODO delete
+    SCongruenceList = [] #for debugging purposes as well
+    ACongruenceList = [] #for debugging purposes as well
     for representation in representations:
         p = representation[0]
-        S = representation[1]
-        x = representation[2]
-        A = representation[3]
-        d = x.transpose()*S*A
-        H = t*A.transpose()*S*A - d.transpose()*d
-        localSyms.append(LocalGenusSymbol(H,p))
+        Sp = representation[1]
+        xp = representation[2]
+        Ap = representation[3]
+        dp = xp.transpose()*Sp*Ap #TODO: return matrices in Z/p^kZ as to make these numbers managably sized
+        Hp = t*Ap.transpose()*Sp*Ap - dp.transpose()*dp
+        localSyms.append(LocalGenusSymbol(Hp,p))
+
+        #TODO fpr debugging purposes
+        # q1 = QuadraticForm(B)
+        # print(f"S_{p}:\n{Sp}")
+        # q2 = QuadraticForm(Sp)
+        # assert q1.is_locally_equivalent_to(q2,p), f"Generated S at prime {p} is invalid. Here is the generated S: \n{matrix(Sp)}. This has the following symbol:\n{Genus(Sp)}."
+
+        dCongruenceList.append((p**(q.valuation(p)), dp))
+        hCongruenceList.append((p**(q.valuation(p)), Hp))
+        xCongruenceList.append((p**(q.valuation(p)), xp))
+        SCongruenceList.append((p**(q.valuation(p)), Sp))
+        ACongruenceList.append((p**(q.valuation(p)), Ap))
+
+        # assert Sp.determinant().valuation(p) == reducedGenus.determinant().valuation(p),\
+        #     f"bad S_{p} generated:\n{Sp}\nhas determinant {factor(Sp.determinant())} versus the genus has determinant {factor(reducedGenus.determinant())}\nAlso here's a representative for the reduced genus:\n{reducedGenus.representative()}"
+
+
+    d = crtMatrix(dCongruenceList)
+    H = crtMatrix(hCongruenceList)
+    x = crtMatrix(xCongruenceList) #TODO delete
+    S = crtMatrix(SCongruenceList) #todo delete aswell
+    A = crtMatrix(ACongruenceList)
+
+    print(f"det: {reducedGenus.determinant()} (factorization: {factor(reducedGenus.determinant())})")
+    print(f"q: {q} (factorization: {factor(q)})")
+    print(f"t: {t} (factorization: {factor(t)})")
 
     if t > 0:
         assert signaturePair[0] >= 1, "t has wrong sign"
@@ -802,12 +850,42 @@ def dubeyHolensteinLatticeRepresentative(globalGenus):
         assert signaturePair[0] >= 1, "t has wrong sign"
         newSignaturePair = (signaturePair[1], signaturePair[0]-1)
 
+    print(f"S:\n{S}")
+
+    assert ((x.transpose()*S*x)[0,0]-t)%q == 0
+    assert block_matrix(Zmod(q),[[x,A]]).determinant() == Zmod(q)(1)
+    print(f"[x,A]:\n{block_matrix(Zmod(q),[[x,A]])}")
+
+    assert matrix(Zmod(q), d) == matrix(Zmod(q), x.transpose()*S*A)
+    assert matrix(Zmod(q), H) == matrix(Zmod(q), t*A.transpose()*S*A - d.transpose()*d)
+    print(f"H:\n{H}")
+    for p in q.prime_divisors():
+        print(f"\tLocal symbol of H at {p}: {LocalGenusSymbol(H,p)}")
+    print(f"H determinant: {H.determinant()} (factorization: {factor(H.determinant()%q)})")
+
     newGenus = GenusSymbol_global_ring(newSignaturePair, localSyms)
-    Hstar = dubeyHolensteinLatticeRepresentative()
+    assert newGenus.determinant() == t**(n-2) * reducedGenus.determinant(), f"\nDeterminant of new genus: {factor(newGenus.determinant())},\nExepcted: {factor(t**(n-2) * reducedGenus.determinant())}"
+    print(f"gamma tilda:\n{newGenus}")
+    print(f"det(gamma tilda): {newGenus.determinant()} (factorization: {factor(newGenus.determinant())})")
 
-    Hstar.append()
 
-    return reducedGenus
+    assert is_GlobalGenus(newGenus), f"generated genus with no existing representative. From: \n {globalGenus} \n ....reduced to non-existent genus \n {newGenus}" #check if new genus has rep
+    Htild = dubeyHolensteinLatticeRepresentative(newGenus)
+
+    print(f"H tilda:\n{Htild}")
+    # print(f"seeking isomorphism from {H} to {Htild}")
+    Utild = computeChangeOfVariables(Htild, H, q)
+    assert matrix(Zmod(q), Htild) == matrix(Zmod(q), Utild.transpose()*H*Utild)
+    print(f"U tilda:\n{Utild}")
+
+    bottomRight = (Htild+Utild.transpose()*d.transpose()*d*Utild)/t
+    returnMatrixBlock = block_matrix([[t, d*Utild],
+                                      [(d*Utild).transpose(), bottomRight]])
+    returnMatrix = matrix(gcdOfGenus*returnMatrixBlock)
+
+    assert Genus(returnMatrix) == globalGenus, f"Bad output. Generated representative's genus:\n{Genus(returnMatrix)}\n...versus input genus:\n{globalGenus}"
+
+    return returnMatrix
 
 if __name__ == "__main__":
     # A = matrix(ZZ, 5, 5, [4, 2, 3, 4, 10,
@@ -839,6 +917,19 @@ if __name__ == "__main__":
 
 
 
+    #TEST IF GENERATION OF DIAGONAL MATRIX REPRESENTATIVE FOR Z_{ODD PRIME} OF GENUS WORKS
+    # B = matrix(ZZ, 5, [[6, -2, 0,-1,3],
+    #                    [-2, 6,-2, 0,0],
+    #                    [0, -2,12,-1,3],
+    #                    [-1, 0,-1,12,3],
+    #                    [3, 0 , 3 ,3,198]])
+    # inputGenus = Genus(B)
+    # print(f"INPUT GENUS: {inputGenus} \n_________")
+    # dyadicRep = block_diagonal_matrix([matrix(ZZ, [[i]]) for i in oddPrimeDiagonalRepresentative(inputGenus, 3)])
+    # print(Genus(dyadicRep))
+
+
+
     # TEST IF GENERATION OF REPRESENTATIVE OF t BY tau1 x1^2 + tau2 x2^2 (mod p) WORKS (SEE FUNCTION DECSRIPTION FOR PRECONDITIONS)
     # for i in range(10000):
     #     print(primitiveRepresentationOddPrimes(ZZ(5), ZZ(363), ZZ(242), ZZ(11), ZZ(3)))
@@ -858,19 +949,60 @@ if __name__ == "__main__":
     
 
     #TEST IF primitivelyRepresentedTWithRepresentations WORKS
-    A = matrix(ZZ, [[64,0,0,0,0,0,0,0,4],
-                [0,2,0,2,0,1,0,3,0],
-                [0,0,3,0,0,0,0,0,0],
-                [0,2,0,4,0,1,0,1,0],
-                [0,0,0,0,5,0,0,0,0],
-                [0,1,0,1,0,6,0,2,0],
-                [0,0,0,0,0,0,7,0,0],
-                [0,3,0,1,0,2,0,8,0],
-                [4,0,0,0,0,0,0,0,4]])
-    inputGenus = Genus(A)
-    print(f"INPUT GENUS: {inputGenus} \n_________")
-    print(primitivelyRepresentedTWithRepresentations(inputGenus))
+    # A = matrix(ZZ, 5, 5, [6, 0, 0, 1, 4,
+    #                     0, 12, 0, 3, 0,
+    #                     0, 0, 18, 0, 0,
+    #                     1, 3, 0, 24, 0,
+    #                     4, 0, 0, 0, 30])
+    # inputGenus = Genus(A)
+    # print(f"INPUT GENUS: {inputGenus} \n_________")
+    # print(primitivelyRepresentedTWithRepresentations(inputGenus))
 
+
+    #TEST IF computeChangeOfBasis() WORKS
+    # A = matrix(ZZ, [[1, 2, 2],
+    #                 [2, 2, 1],
+    #                 [2, 1, 3]])
+    # B = matrix(ZZ, [[21, 32, 20],
+    #                 [32, 47, 29],
+    #                 [20, 29, 18]])
+    # print(computeChangeOfVariables(A, B, ZZ(225)))
+
+
+    #TEST IF FUNCTION WORKS
+    
+    A = matrix(ZZ, [[64,0,0,0,0,0,0,0,4],
+                    [0,2,0,2,0,1,0,3,0],
+                    [0,0,3,0,0,0,0,0,0],
+                    [0,2,0,4,0,1,0,1,0],
+                    [0,0,0,0,5,0,0,0,0],
+                    [0,1,0,1,0,6,0,2,0],
+                    [0,0,0,0,0,0,7,0,0],
+                    [0,3,0,1,0,2,0,8,0],
+                    [4,0,0,0,0,0,0,0,4]])
+    
+    B = matrix(ZZ, 5, 5, [6, 0, 0, 1, 4,
+                          0, 12, 0, 3, 0,
+                          0, 0, 18, 0, 0,
+                          1, 3, 0, 24, 0,
+                          4, 0, 0, 0, 30])
+    
+    C = matrix(ZZ, [[2,0,0,0,0],
+                    [0,14,2,-6,-6],
+                    [0,2,80,12,-30],
+                    [0,-6,12,144,-6],
+                    [0,-6,-30,-6,270]])
+    
+    D = matrix(ZZ, [[2,0,0,0],
+                    [0,14,2,-6],
+                    [0,2,80,12],
+                    [0,-6,12,144]])
+
+    inputGenus = Genus(D)
+    assert is_GlobalGenus(inputGenus)
+    print(f"input genus: \n {inputGenus} \n _______________")
+    print(dubeyHolensteinLatticeRepresentative(inputGenus))
+    
 
 
 
