@@ -37,14 +37,14 @@ from itertools import product
 
 if __name__ == "__main__":
     signaturePair = (ZZ(4),ZZ(4))
-    det = 2**4*3**3*13**4
+    det = 2**2*3**3
     testCases = genus.all_genus_symbols(signaturePair[0], signaturePair[1], det)
     print(f"{len(testCases)} symbols to compute representatives of")
     for test in testCases:
         # assert is_GlobalGenus(test), f"Test case of:\n{test}is not even a valid genus!"
-        print(f"Symbols:\n{"\n".join([str(i.symbol_tuple_list()) for i in test.local_symbols()])}\n ____")
+        print(f"Symbols:\n{"\n".join([str(i.symbol_tuple_list()) for i in test.local_symbols()])}")
         assert(Genus(test.representative()) == test)
-        lasVegas.dubeyHolensteinLatticeRepresentative(test,check = False,superDumbCheck = True)
+        print(f"Representative:\n{lasVegas.dubeyHolensteinLatticeRepresentative(test,check = False,superDumbCheck = True)}\n______")
 
     # test = GenusSymbol_global_ring((3,4), 
     #                                [

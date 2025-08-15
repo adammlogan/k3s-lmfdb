@@ -27,6 +27,7 @@ from sage.matrix.constructor import zero_matrix
 from sage.arith.all import crt
 from sage.quadratic_forms.genera.genus import Genus
 from sage.libs.pari import pari
+from pathlib import Path
 from random import randint
 from math import prod
 from itertools import product
@@ -40,20 +41,20 @@ def genusFromSymbolLists(signaturePair, tupleLists):
 def makeSmall(L, signaturePair):
     """does LLL on the matrix L of integers
     signaturePair can be calculated off of L but im lazy"""
-    # sig = self.signature_pair_of_matrix()
-    # if sig[0] * sig[1] != 0:
-    #     from sage.env import SAGE_EXTCODE
-    #     m = pari(L)
-    #     pari.read(Path(SAGE_EXTCODE) / "pari" / "simon" / "qfsolve.gp")
-    #     m = pari('qflllgram_indefgoon')(m)
-    #     # convert the output string to sage
-    #     L = m.sage()[0]
-    # elif sig[1] != 0:
-    #     U = -(-L).LLL_gram()
-    #     L = U.T * L * U
-    # else:
-    #     U = L.LLL_gram()
-    #     L = U.T * L * U
+    sig = signaturePair
+    if sig[0] * sig[1] != 0:
+        from sage.env import SAGE_EXTCODE
+        m = pari(L)
+        pari.read(Path(SAGE_EXTCODE) / "pari" / "simon" / "qfsolve.gp")
+        m = pari('qflllgram_indefgoon')(m)
+        # convert the output string to sage
+        L = m.sage()[0]
+    elif sig[1] != 0:
+        U = -(-L).LLL_gram()
+        L = U.T * L * U
+    else:
+        U = L.LLL_gram()
+        L = U.T * L * U
     return L
 
 def nonQuadraticResidue(p, randomThreshold = 40):
