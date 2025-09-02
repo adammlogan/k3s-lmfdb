@@ -113,12 +113,12 @@ function V_best(A)
     // At the moment something is wrong with using duals, so we don't use them
     // for B in [A, Ad] do
     for B in [A] do
-	Append(~VAs, <[Vector(v) : v in V_ms(B)],B>);
-	try
-	    Append(~VAs, <[Vector(v) : v in V_cvp(B )],B>);
-	catch e
-	    continue;
-	end try;
+	    Append(~VAs, <[Vector(v) : v in V_ms(B)],B>);
+        try
+            Append(~VAs, <[Vector(v) : v in V_cvp(B )],B>);
+        catch e
+            continue;
+        end try;
     end for;
     sorted := Sort(VAs, func<x,y | #x[1]-#y[1]>);
     // return sorted[1];
@@ -130,13 +130,13 @@ function V_best_with_dual(A)
     VAs := [];
     max := Infinity();
     for B in [A, Ad] do
-	for Vchar in [V_ms, V_cvp] do
-	    VA := [Vector(v) : v in Vchar(B : max_num := max)];
-	    Append(~VAs, <VA,B>);
-	    if (#VA lt max) then
-		max := #VA;
-	    end if;
-	end for;
+        for Vchar in [V_ms, V_cvp] do
+            VA := [Vector(v) : v in Vchar(B : max_num := max)];
+            Append(~VAs, <VA,B>);
+            if (#VA lt max) then
+                max := #VA;
+            end if;
+        end for;
     end for;
     sorted := Sort(VAs, func<x,y | #x[1]-#y[1]>);
     return sorted[1];
@@ -200,7 +200,9 @@ end function;
 
 function U_V(A)
     A := ChangeRing(A, Rationals());
-    VA, A := Explode(V_best_with_dual(A));
+    // at the moment we want the canonical form to actually be the canonical form of A and not of its dual
+    // VA, A := Explode(V_best_with_dual(A));
+    VA := V_best(A);
     // This is not really needed, we just keep track of the weights
     // G_A := CompleteGraph(#VA);
     B := ChangeRing(Matrix(VA),Rationals());

@@ -3,6 +3,7 @@
 
 // Todo: attach finite group code for IO.m and GroupToString
 // AttachSpec("/Users/roed/sage/FiniteGroups/Code/spec");
+AttachSpec("lattices.spec");
 
 function hecke_primes(rank)
     if rank lt 8 then
@@ -80,11 +81,9 @@ procedure fill_genus(label)
     disc_invs := basics["discriminant_group_invs"];
     disc_invs := "[" * disc_invs[2..#disc_invs-1] * "]"; // Switch to square brackets
     disc_invs := eval disc_invs;
-    disc_aut_size := #AutomorphismGroup(AbelianGroup(disc_invs)); // Why are we computing this? Is this a field we want?
+    disc_aut_size := #AutomorphismGroup(AbelianGroup(disc_invs)); 
 
-    // TODO: Sort reps according to canonical form?
-
-    for idx->L in reps do
+    for L in reps do
         lat := AssociativeArray();
         for col in ["rank", "signature", "det", "disc", "discriminant_group_invs", "is_even"] do
             lat[col] := basics[col];
@@ -93,11 +92,15 @@ procedure fill_genus(label)
         D := Dual(L);
         lat["dual_det"] := Determinant(D);
         gram := GramMatrix(L);
-        lat["gram"] := Eltseq(gram);
+        // lat["gram"] := Eltseq(gram);
+        // The following might hang - check when, why and if we can get around it...
+        lat["gram"] := Eltseq(CanonicalForm(gram));
         // Add canonical gram matrix
         // Any systematic way of producing names, or are we doing it manually?
+        // The following might hang - check when and can we get around it...
         A := AutomorphismGroup(L);
         lat["aut_size"] := #A;
+        lat["festi_veniani_index"] := disc_aut_size div #A;
         if CanIdentifyGroup(#A) then
             Aid := IdentifyGroup(A);
             lat["aut_label"] := Sprintf("%o.%o", Aid[1], Aid[2]);
@@ -114,24 +117,53 @@ procedure fill_genus(label)
         lat["dual_hermite"] := HermiteNumber(D);
         lat["kissing"] := KissingNumber(L);
         lat["dual_kissing"] := KissingNumber(D);
+        lat["level"] := Level(L);
         m := Minimum(L);
         lat["minimum"] := m;
         prec := Max(StringToInteger(basics["theta_prec"]), m+4);
-        lat["theta_series"] := Eltseq(ThetaSeries(L, prec - 1));
+        lat["theta_series"] := AbsEltseq(ThetaSeries(L, prec - 1));
         lat["theta_prec"] := prec;
-        lat["dual_theta_series"] := Eltseq(ThetaSeries(D, prec - 1));
+        lat["dual_theta_series"] := AbsEltseq(ThetaSeries(D, prec - 1));
         // Need dual_label, dual_conway
         // Compute festi_veniani_index in Sage?
-        // Need label for lattice.
-        lat["label"] := Sprintf("%o.%o", basics["label"], idx);
+        
+        // TODO - do we also need these? or should we only keep them for the genus?
+        lat["genus_label"] := basics["label"];
+        lat["conway_symbol"] := basics["conway_symbol"];
         Append(~lats, lat);
-        output := Join([Sprintf("%o", to_postgres(lat[k])) : k in Keys(lat)], "|");
+        
+    end for;
+
+    function cmp_lat(L1, L2)
+        d := L2["aut_size"] - L1["aut_size"];
+        if (d ne 0) then return d; end if;
+        prec := Minimum(L1["theta_prec"], L2["theta_prec"]);
+        for i in [1..prec - 1] do
+            d := L1["theta_series"][i] - L2["theta_series"][i];
+            if (d ne 0) then return d; end if;
+        end for;
+        for i in [1..L1["rank"]^2] do
+            d := Eltseq(L1["gram"])[i] - Eltseq(L2["gram"])[i];
+            if (d ne 0) then return d; end if;
+        end for;
+        return 0;
+    end function;
+
+    // Tie breaker
+    // TODO: Sort reps according to canonical form?
+    lats := Sort(lats, cmp_lat);
+
+    for idx->L in lats do
+        // Need label for lattice.
+        lat := L;
+        lat["label"] := Sprintf("%o.%o", basics["label"], idx);
+        output := Join([Sprintf("%o", to_postgres(lat[k])) : k in lat_format], "|");
         Write("lattice_data/" * lat["label"], output : Overwrite);
     end for;
 
-    output := Join([basics[k] : k in basic_format] cat [Sprintf("%o", advanced[k]) : k in Keys(advanced)], "|");
+    output := Join([basics[k] : k in basic_format] cat [Sprintf("%o", advanced[k]) : k in advanced_format], "|");
     Write("genera_advanced/" * label, output : Overwrite);
 
 end procedure;
 
-
+fill_genus(label);
