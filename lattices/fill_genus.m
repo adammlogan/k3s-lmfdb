@@ -14,7 +14,7 @@ function hecke_primes(rank)
 end function;
 
 function dict_to_jsonb(dict)
-    return "{" * Join([Sprintf("%o:%o", key, dict[key]) : key in Keys(dict)], ",") * "}";
+    return "{" * Join([Sprintf("\"%o\":%o", key, dict[key]) : key in Keys(dict)], ",") * "}";
 end function;
 
 function to_postgres(val)
