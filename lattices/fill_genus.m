@@ -17,13 +17,14 @@ function dict_to_jsonb(dict)
     return "{" * Join([Sprintf("\"%o\":%o", key, dict[key]) : key in Keys(dict)], ",") * "}";
 end function;
 
-function to_postgres(val)
+function to_postgres(val : jsonb_val := false)
+    delims := jsonb_val select "[]" else "{}";
     if Type(val) in [SeqEnum, Tup] then
-        return "{" * Join([Sprintf("%o",to_postgres(x)) : x in val],",") * "}";
+        return delims[1] * Join([Sprintf("%o",to_postgres(x : jsonb_val)) : x in val],",") * delims[2];
     elif Type(val) eq Assoc then
         val_prime := AssociativeArray();
         for key in Keys(val) do
-            val_prime[to_postgres(key)] := to_postgres(val[key]);
+            val_prime[to_postgres(key)] := to_postgres(val[key] : jsonb_val);
         end for;
         return dict_to_jsonb(val_prime);
     else
@@ -69,11 +70,11 @@ procedure fill_genus(label)
         for p in hecke_primes(n) do
             Ap := AdjacencyMatrix(Genus(L0),p);
             fpf := Factorization(CharacteristicPolynomial(Ap));
-            hecke_mats[p] := to_postgres(Eltseq(Ap));
-            hecke_polys[p] := to_postgres([(<Coefficients(pair[1]), pair[2]>) : pair in fpf]);
+            hecke_mats[p] := Eltseq(Ap);
+            hecke_polys[p] := [(<Coefficients(pair[1]), pair[2]>) : pair in fpf];
         end for;
-        advanced["adjacency_matrix"] := dict_to_jsonb(hecke_mats);
-        advanced["adjacency_polynomials"] := dict_to_jsonb(hecke_polys);
+        advanced["adjacency_matrix"] := to_postgres(hecke_mats);
+        advanced["adjacency_polynomials"] := to_postgres(hecke_polys);
     else
         advanced["adjacency_matrix"] := "\\N";
         advanced["adjacency_polynomials"] := "\\N";
