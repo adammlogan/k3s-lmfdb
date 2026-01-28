@@ -72,11 +72,12 @@ procedure fill_genus(label)
         assert n gt 2;
         K := RationalsAsNumberField();
         LWG := NumberFieldLatticeWithGram;
-        Dual := RescaledDualNF;
+        DualLat := RescaledDualNF;
     else
         assert n eq s;
         K := Rationals();
         LWG := LatticeWithGram;
+        DualLat := Dual; 
     end if;
     rep := basics["rep"];
     // Switch to square brackets
@@ -112,7 +113,7 @@ procedure fill_genus(label)
         end for;
         lat["genus_label"] := basics["label"];
         lat["class_number"] := advanced["class_number"];
-        D := Dual(L);
+        D := DualLat(L);
         lat["dual_det"] := Determinant(D);
         // At the moment we do not know the label for the dual
         lat["dual_label"] := "\\N";
