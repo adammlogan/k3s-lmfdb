@@ -19,7 +19,9 @@ end function;
 
 function to_postgres(val : jsonb_val := false)
     delims := jsonb_val select "[]" else "{}";
-    if Type(val) in [SeqEnum, Tup] then
+    if ISA(Type(val),Mtrx) then
+        return to_postgres(Eltseq(val));
+    elif Type(val) in [SeqEnum, Tup] then
         return delims[1] * Join([Sprintf("%o",to_postgres(x : jsonb_val)) : x in val],",") * delims[2];
     elif Type(val) eq Assoc then
         val_prime := AssociativeArray();
@@ -71,7 +73,7 @@ procedure fill_genus(label)
         for p in hecke_primes(n) do
             Ap := AdjacencyMatrix(Genus(L0),p);
             fpf := Factorization(CharacteristicPolynomial(Ap));
-            hecke_mats[p] := Eltseq(Ap);
+            hecke_mats[p] := Ap;
             hecke_polys[p] := [(<Coefficients(pair[1]), pair[2]>) : pair in fpf];
         end for;
         advanced["adjacency_matrix"] := to_postgres(hecke_mats);
@@ -90,12 +92,20 @@ procedure fill_genus(label)
         for col in ["rank", "signature", "det", "disc", "discriminant_group_invs", "is_even"] do
             lat[col] := basics[col];
         end for;
+        lat["genus_label"] := basics["label"];
         lat["class_number"] := advanced["class_number"];
         D := Dual(L);
         lat["dual_det"] := Determinant(D);
+        // At the moment we do not know the label for the dual
+        lat["dual_label"] := "\\N";
+        // TODO := The code for ConwaySymbol is currently in sage. 
+        // The magma implemntation is in version 2.29 that has some bugs
+        lat["dual_conway"] := "\\N";
         gram := GramMatrix(L);
         if (n eq s) then 
+            // TODO : This is lossy - change later
             lat["gram"] := Eltseq(CanonicalForm(gram));
+            lat["canonical_gram"] := lat["gram"];
             A := AutomorphismGroup(L);
             lat["aut_size"] := #A;
             lat["festi_veniani_index"] := disc_aut_size div #A;
@@ -178,14 +188,28 @@ procedure fill_genus(label)
     // 5. arbitrary tiebreaker
     // TODO: Sort reps according to canonical form?
     if (n eq s) then
+        // TODO: Need to apply permutation to adjacency matrix hecke_mats
         lats := Sort(lats, cmp_lat);
     end if;
 
     SetColumns(0);
     for idx->L in lats do
         // Need label for lattice.
+        lats[idx]["label"] := Sprintf("%o.%o", basics["label"], idx);
+    end for;
+
+    for idx->L in lats do
         lat := L;
-        lat["label"] := Sprintf("%o.%o", basics["label"], idx);
+        if (n eq s) then
+            pNeighbors := AssociativeArray();
+            for p in hecke_primes(n) do
+                pNeighbors[p] := ["\"" * lats[j]["label"] * "\"" : j in [1..#lats] | hecke_mats[p][idx,j] ne 0];
+            end for;
+            lat["pneighbors"] := to_postgres(pNeighbors);
+        else
+            lat["pneighbors"] := "\\N";
+        end if;
+        assert #Keys(lat) eq #lat_format;
         output := Join([Sprintf("%o", to_postgres(lat[k])) : k in lat_format], "|");
         Write("lattice_data/" * lat["label"], output : Overwrite);
     end for;
