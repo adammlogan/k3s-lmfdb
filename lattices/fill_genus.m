@@ -51,6 +51,12 @@ function RescaledDualNF(L)
     return NumberFieldLattice(Rows(ChangeRing(B, K)) : InnerProduct := ChangeRing(M,K));
 end function;
 
+function genus_reps(L)
+    if Type(L) eq LatNF then return GenusRepresentatives(L); end if;
+    if IsOdd(L) then return GenusRepresentatives(L); end if;
+    return Setseq(neighbours(L : thorough));
+end function;
+
 procedure fill_genus(label : genus_reps_func := GenusRepresentatives)
     data := Split(Split(Read("genera_basic/" * label), "\n")[1], "|");
     basic_format := Split(Read("genera_basic.format"), "|");
@@ -210,8 +216,8 @@ procedure fill_genus(label : genus_reps_func := GenusRepresentatives)
             d := L1["theta_series"][i] - L2["theta_series"][i];
             if (d ne 0) then return d; end if;
         end for;
-        for i in [1..L1["rank"]^2] do
-            d := Eltseq(L1["gram"])[i] - Eltseq(L2["gram"])[i];
+        for i in [1..n^2] do
+            d := L1["gram"][i] - L2["gram"][i];
             if (d ne 0) then return d; end if;
         end for;
         return 0;
@@ -264,7 +270,7 @@ procedure fill_genus(label : genus_reps_func := GenusRepresentatives)
 end procedure;
 
 try
-    // fill_genus(label : genus_reps_func := neighbours);
+    // fill_genus(label : genus_reps_func := genus_reps);
     fill_genus(label);
 catch e
     E := Open("/dev/stderr", "a");
