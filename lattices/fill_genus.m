@@ -1,8 +1,3 @@
-// This file is used to find all of the representatives in a positive definite genus, along with some difficult to compute quantities about the genus itself.
-// Usage: parallel -j 100 --timeout 1800 -a genera_todo.txt magma -b label:={} fill_genus.m
-
-AttachSpec("lattices.spec");
-
 import "neighbours.mag" : neighbours;
 
 function hecke_primes(rank)
@@ -62,7 +57,8 @@ function genus_reps(L)
     return Setseq(neighbours(L : thorough));
 end function;
 
-procedure fill_genus(label : genus_reps_func := GenusRepresentatives)
+intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives)
+{Fill the data for a genus and its lattice representatives, given files in the genera_basic format.}
     data := Split(Split(Read("genera_basic/" * label), "\n")[1], "|");
     basic_format := Split(Read("genera_basic.format"), "|");
     advanced_format := Split(Read("genera_advanced.format"), "|");
@@ -273,13 +269,5 @@ procedure fill_genus(label : genus_reps_func := GenusRepresentatives)
     error if Keys(advanced) ne Set(advanced_format), [k : k in advanced_format | k notin Keys(advanced)], [k : k in Keys(advanced) | k notin advanced_format];
     output := Join([basics[k] : k in basic_format] cat [Sprintf("%o", advanced[k]) : k in advanced_format], "|");
     Write("genera_advanced/" * label, output : Overwrite);
-end procedure;
-
-try
-    // fill_genus(label : genus_reps_func := genus_reps);
-    fill_genus(label);
-catch e
-    E := Open("/dev/stderr", "a");
-    Write(E, Sprint(e) cat "\n");
-    Flush(E);
-end try;
+    return;
+end intrinsic;
