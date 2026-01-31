@@ -8,6 +8,8 @@ function orth_comp(rs,sub)
   return ker,RSpace(Z,Dimension(ker),GramMatrix(ker));
 end function;
 
+// this is an example
+// it decomposes into components of rank 5 and 2
 lat := LatticeWithGram(SymmetricMatrix([6,-9,16,-3,7,18,1,-2,-8,8,0,0,-7,4,4,1,-1,0,-2,0,2,-1,2,1,0,0,0,2]));
 function orth_dec(lat)
   mat := GramMatrix(lat);
@@ -29,7 +31,7 @@ function orth_dec(lat)
         new_orth := orth_comp(rs,new_comp);
         // why doesn't Saturation give you a subspace of the same space?
         sat_comp := sub<rs|Basis(Saturation(new_comp))>;
-        if sat_comp eq rs then return [rs]; end if; // done
+        if sat_comp eq rs then return [LatticeWithGram(GramMatrix(rs))]; end if; // done
         if sub<rs|new_orth,sat_comp> eq rs then
           // we have found a component; recursively find the rest
           orth_lat := LatticeWithGram(GramMatrix(new_orth));
@@ -54,4 +56,35 @@ function orth_dec(lat)
   end for;
 
   error "shouldn't be here";
+end function;
+
+function split_1(lat)
+  sv := ShortVectors(lat,1,1);
+  sub_1 := sub<lat|[x[1]: x in sv]>;
+  assert IsIsomorphic(sub_1,StandardLattice(Dimension(sub_1)));
+  rs := RSpace(Z,Dimension(lat),GramMatrix(lat));
+  orth_1 := orth_comp(rs,sub<rs|[rs!Eltseq(i): i in Basis(sub_1)]>);
+  orth_lat := sub<lat|[lat!Eltseq(i): i in Basis(orth_comp)]>;
+  return orth_1, orth_lat;
+end function;
+
+function root_string(lat)
+  sv := ShortVectors(lat,2,2);
+  sub_2 := LatticeWithGram(GramMatrix(sub<lat|[x[1]: x in sv]>));
+  od := orth_dec(sub_2);
+  root_str := "";
+  for rl in od do
+    if Rank(rl) in [6..8] and Determinant(rl) eq 9-Rank(rl) then
+      str := Sprintf("E%o",Rank(rl));
+    elif Rank(rl) ge 4 and Determinant(rl) eq 4 then
+      str := Sprintf("D%o",Rank(rl));
+    elif Determinant(rl) eq Rank(rl)+1 then
+      str := Sprintf("A%o",Rank(rl));
+    else
+      error "unknown root lattice";
+    end if;
+    assert IsIsomorphic(rl,LatticeWithGram(CartanMatrix(str)));
+    root_str *:= str;
+  end for;
+  return root_str;
 end function;
