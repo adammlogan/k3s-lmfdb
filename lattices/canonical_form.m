@@ -69,7 +69,11 @@ end function;
 function V_cvp(A : max_num := Infinity())
     A := ChangeRing(A, Rationals());
     L := LatticeWithGram(A);
-    minA := &cat[[v,-v] : v in ShortestVectors(L : Max := max_num div 2)];
+    if Type(max_num) eq RngIntElt then
+        minA := &cat[[v,-v] : v in ShortestVectors(L : Max := max_num div 2)];
+    else
+        minA := &cat[[v,-v] : v in ShortestVectors(L)];
+    end if;
     LminA := sub<L | minA>;
     if (LminA eq L) then
 	    return minA;
