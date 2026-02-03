@@ -130,6 +130,7 @@ end function;
 // in particular, the kernel is the set of lifts of the trivial automorphism.
 // here we take the characteristic subgroup to be spanned by the first d rows.
 function aut_char(lat,d)
+  if assigned lat`AutomorphismGroup then return lat`AutomorphismGroup; end if;
   if d eq Rank(lat) then return AutomorphismGroup(lat); end if;
   gm := GramMatrix(lat);
   gm_sub := Matrix(d,d,[gm[i,j]: i,j in [1..d]]);
@@ -141,6 +142,7 @@ function aut_char(lat,d)
     // the whole automorphism group lifts
     aut_lat := MatrixGroup<Rank(lat),Z|ker cat [x[1]: x in lift_gens]>;
     assert #aut_lat eq #ker*#aut_sub;
+    lat`AutomorphismGroup := aut_lat;
     return aut_lat;
   else
     // we descend through the lattice of subgroups.
@@ -177,6 +179,7 @@ function aut_char(lat,d)
             // if it were bigger we would have found it already
             aut_lat := MatrixGroup<Rank(lat),Z|&cat lift_gc,&cat [can_lift[i]: i in Keys(can_lift)]>;
             #sub<aut_sub|Keys(can_lift)>, #aut_lat;
+            lat`AutomorphismGroup := aut_lat;
             return aut_lat;
           else
             for i in [1..#inds] do
@@ -200,6 +203,7 @@ end function;
 // homomorphism above in the full automorphism group will be small, and that
 // would make this one better.
 function aut_char_simple(lat,d)
+  if assigned lat`AutomorphismGroup then return lat`AutomorphismGroup; end if;
   if d eq Rank(lat) then return AutomorphismGroup(lat); end if;
   gm := GramMatrix(lat);
   gm_sub := Matrix(d,d,[gm[i,j]: i,j in [1..d]]);
@@ -218,6 +222,7 @@ function aut_char_simple(lat,d)
     // the whole automorphism group lifts
     aut_lat := MatrixGroup<Rank(lat),Z|ker cat [x[1]: x in lift_gens]>;
     assert #aut_lat eq #ker*#aut_sub;
+    lat`AutomorphismGroup := aut_lat;
     return aut_lat;
   else
     can_lift := AssociativeArray(aut_sub);
@@ -245,6 +250,7 @@ function aut_char_simple(lat,d)
             // if it were bigger we would have found it already
             aut_lat := MatrixGroup<Rank(lat),Z|ker,&cat lift_gc,&cat [can_lift[i]: i in Keys(can_lift)]>;
             // #sub<aut_sub|Keys(can_lift)>, #aut_lat;
+            lat`AutomorphismGroup := aut_lat;
             return aut_lat;
           else
             for i in [1..#inds] do
@@ -267,6 +273,7 @@ end function;
 // caution: if the index of the subgroup of Aut(char. sublat.) that can be
 // lifted to the full lattice is greater than max_ind, this will run forever
 function aut_max_ind(lat,d: max_ind := 100)
+  if assigned lat`AutomorphismGroup then return lat`AutomorphismGroup; end if;
   if d eq Rank(lat) then return AutomorphismGroup(lat); end if;
   gm := GramMatrix(lat);
   gm_sub := Matrix(d,d,[gm[i,j]: i,j in [1..d]]);
@@ -332,6 +339,7 @@ function aut_max_ind(lat,d: max_ind := 100)
   end while;
   aut_lat := MatrixGroup<Rank(lat),Z|lifts>;
   assert #aut_lat eq #lift_sub*#ker;
+  lat`AutomorphismGroup := aut_lat;
   return aut_lat;
 end function;
   
