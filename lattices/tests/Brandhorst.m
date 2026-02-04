@@ -1,4 +1,3 @@
-AttachSpec("lattices.spec");
 import "canonical_form.m" : test_canonical;
 function TextToMatrix(s)
   first := Index(s, "[")+1;

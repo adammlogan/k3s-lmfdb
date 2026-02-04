@@ -1,4 +1,3 @@
-AttachSpec("lattices.spec");
 import "canonical_form.m" : test_V, test_canonical, V_cvp;
 M:=-Matrix(Rationals(), 19, 19 ,[-2, 0, 0, 0, 0, -1, -1, 0, 1, -1, 1, 1, 1, \
 -1, 1, -1, 1, 1, -1, 0, -2, -1, -1, -1, 0, 0, 0, -1, 1, -1, -1, -1, 1, 1, 1, 1\
