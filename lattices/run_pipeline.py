@@ -13,14 +13,11 @@ def run_pipeline(n_plus, n_minus, lb_det, ub_det):
         os.remove("genera_todo.txt")
     pwd = os.getcwd()
     os.chdir("genera_basic")
-    fnames = []
     for det in range(lb_det, ub_det+1):
-        fnames += glob(f"{n}.{sig}.{det}.*")
+        n_written = os.system(f"ls {n}.{sig}.{det}.* >> " + pwd + "/genera_todo.txt")
     os.chdir(pwd)
-    for fname in fnames:
-        with open("genera_todo.txt", "a") as f:
-            n_written = f.write(fname + "\n")
-    cmd = f"parallel -j 100 --timeout 1800 -a genera_todo.txt magma -b label:={{}} verbose:=1 run_fill_genus.m"
+    logs = f"logs/{n_plus}_{n_minus}_{lb_det}_{ub_det}"
+    cmd = f"parallel -j 100 --timeout 1800 -a genera_todo.txt --results {logs} magma -b label:={{}} verbose:=1 run_fill_genus.m"
     ret_val = os.system(cmd)
     fnames = []
     for det in range(lb_det, ub_det+1):

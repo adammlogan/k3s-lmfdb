@@ -105,6 +105,7 @@ intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives, 
     advanced["adjacency_matrix"] := "\\N";
     advanced["adjacency_polynomials"] := "\\N";
     if genus_success then
+        reps := reps[1];
         advanced["class_number"] := #reps;
         vprintf FillGenus, 1 : "Computing adjacency matrix for p = ";
         hecke_mats := AssociativeArray();
@@ -112,6 +113,7 @@ intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives, 
         G := Genus(L0);
         // This works for 2.28 - should be replaced by SetGenus in 2.29
         G`Representatives := reps;
+        G`IsNatural := true;
         for p in hecke_primes(n) do
             vprintf FillGenus, 1 : "%o:", p;
             vtime FillGenus, 1 : Ap := AdjacencyMatrix(G,p);
@@ -171,11 +173,13 @@ intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives, 
             success, canonical_gram, elapsed := TimeoutCall(timeout, CanonicalForm, <gram>, 1);
             vprintf FillGenus, 1 : "Canonical form computed in %o seconds\n", elapsed;
             if success then 
+                canonical_gram := canonical_gram[1];
                 lat["canonical_gram"] := Eltseq(canonical_gram);
             end if;
             success, aut_group, elapsed := TimeoutCall(timeout, AutomorphismGroup, <L>, 1);
             vprintf FillGenus, 1 : "Automorphism group computed in %o seconds\n", elapsed;
             if success then 
+                aut_group := aut_group[1];
                 lat["aut_group"] := GroupToString(aut_group : use_id:=false);
                 lat["aut_size"] := #aut_group;
                 lat["festi_veniani_index"] := #aut_group div disc_aut_size;
@@ -224,7 +228,8 @@ intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives, 
         // TODO - do we also need these? or should we only keep them for the genus?
         lat["genus_label"] := basics["label"];
         lat["conway_symbol"] := basics["conway_symbol"];
-        lat["dual_conway_symbol"] := basics["dual_conway_symbol"];
+        // This is only saved for the genus ?!
+        // lat["dual_conway_symbol"] := basics["dual_conway_symbol"];
         Append(~lats, lat);
     end for;
 
