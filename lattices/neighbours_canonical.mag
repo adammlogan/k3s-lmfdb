@@ -55,17 +55,18 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
   found_hashes := {@@};
   
   while #todo gt 0 and #done lt bd and mass_left gt 0 do
+    good_inds := [x: x in [1..#todo]|hashes[x] notin found_hashes];
     ct +:= 1;
     if not silent then
       if ct mod 100 eq 0 then
         printf "%o done, %o found, %o left, time taken %o\n", ct, #done, #todo, Cputime(cp);
-      else printf ".";
+      else printf (#good_inds gt 0 select "+" else "*");
       end if;
     end if;
-    good_inds := [x: x in [1..#todo]|hashes[x] notin found_hashes];
     ind := (#good_inds gt 0 select Random(good_inds) else Random(1,#todo));
     l := todo[ind];
     cf := cf_fn(l);
+    assert #good_inds eq 0 or cf notin can_forms;
     todo := {@todo[i]: i in Remove([1..#todo],ind)@};
     the_hash := hashes[ind];
     Remove(~hashes,ind);
@@ -79,11 +80,13 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
       if mass_left eq 0 then
         g`Representatives := done;
       else
-        nlat := {@LatticeWithGram(GramMatrix(n)): n in nb_fn(l,p)|n notin done@};
+        nlat := {@LatticeWithGram(GramMatrix(n)): n in nb_fn(l,p)@};
+        nlat := {@n: n in nlat|n notin done and n notin todo@};
         todo join:= nlat;
         hashes cat:= [hash(i): i in nlat];
       end if;
     end if;
+    assert #todo eq #hashes;
   end while;
   if mass_left gt 0 then "warning: finished exploring the graph but still missing", mass_left, "of mass; consider rerunning with larger p"; end if;
   return done,can_forms,g;
