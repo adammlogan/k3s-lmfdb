@@ -5,29 +5,35 @@ import os
 from merge_files import merge_files
 
 # creates file for copy_from to the lat_genera and lat_lattices_new tables
-def run_pipeline(n_plus, n_minus, lb_det, ub_det):
-    write_all_of_sig_between_genera_basic(n_plus, n_minus, lb_det, ub_det)
+def run_pipeline(n_plus, n_minus, log_ub_det):
+    ub_det = 10**log_ub_det
+    write_all_of_sig_between_genera_basic(n_plus, n_minus, 1, ub_det)
     n = n_plus + n_minus
     sig = n_plus - n_minus
     if os.path.exists("genera_todo.txt"):
         os.remove("genera_todo.txt")
     pwd = os.getcwd()
     os.chdir("genera_basic")
-    for det in range(lb_det, ub_det+1):
-        n_written = os.system(f"ls {n}.{sig}.{det}.* >> " + pwd + "/genera_todo.txt")
+    fnames = []
+    for t in range(1, log_ub_det+1):
+        fnames += glob(f"{n}.{sig}." + t*"?" + ".*")
     os.chdir(pwd)
-    logs = f"logs/{n_plus}_{n_minus}_{lb_det}_{ub_det}"
-    cmd = f"parallel -j 100 --timeout 1800 -a genera_todo.txt --results {logs} magma -b label:={{}} verbose:=1 run_fill_genus.m"
+    with open("genera_todo.txt", "a") as f:
+        n_written = f.write("\n".join(fnames))
+    outputs = f"outputs/{n_plus}_{n_minus}_1_{ub_det}"
+    log = f"logs/{n_plus}_{n_minus}_1_{ub_det}.log"
+    #cmd = f"parallel -j 100 --timeout 1800 -a genera_todo.txt --joblog {log} --results {outputs} magma -b label:={{}} verbose:=1 run_fill_genus.m"
+    cmd = f"parallel -j 100 -a genera_todo.txt --joblog {log} --results {outputs} magma -b label:={{}} verbose:=1 run_fill_genus.m"
     ret_val = os.system(cmd)
     fnames = []
-    for det in range(lb_det, ub_det+1):
-        fnames += glob(f"genera_advanced/{n}.{sig}.{det}.*")
-    merge_files(fnames, f"tables/genera_advanced_{n}_{sig}_{lb_det}_{ub_det}.tbl")
+    for t in range(1, log_ub_det+1):
+        fnames += glob(f"genera_advanced/{n}.{sig}." + t*"[0-9]" + ".*")
+    merge_files(fnames, f"tables/genera_advanced_{n}_{sig}_1_{ub_det}.tbl")
     fnames = []
-    for det in range(lb_det, ub_det+1):
-        fnames += glob(f"lattice_data/{n}.{sig}.{det}.*")
-    merge_files(fnames, f"tables/lattices_{n}_{sig}_{lb_det}_{ub_det}.tbl", schema="lat")
+    for t in range(1, log_ub_det+1):
+        fnames += glob(f"lattice_data/{n}.{sig}." + t*"[0-9]" + ".*")
+    merge_files(fnames, f"tables/lattices_{n}_{sig}_1_{ub_det}.tbl", schema="lat")
     return
 
-if __name__ == "__main__":
-    run_pipeline(1, 1, 1, 1)
+# if __name__ == "__main__":
+#    run_pipeline(1, 1, 1, 1)

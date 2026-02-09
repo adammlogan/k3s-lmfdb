@@ -590,7 +590,7 @@ def create_genus_entry(genus_symbol):
     table_row['det'] = genus_symbol.determinant()
     table_row['disc'] = table_row['det']
     if (genus_symbol.is_even() and genus_symbol.rank() % 2 == 1):
-        table_row['disc'] *= 2
+        table_row['disc'] //= 2
     table_row['conway_symbol'] = conway_symbol(genus_symbol)
     table_row['level'] = level = genus_symbol.level()
     table_row['is_even'] = genus_symbol.is_even()
@@ -730,7 +730,7 @@ COL_TYPE_LATTICE = {'det': 'bigint',
  'norm1_sublattice': 'text',
  'norm1_complement': 'text',
  'Zn_complement': 'text',
- 'successive_minima': 'integer'}
+ 'successive_minima': 'integer[]'}
 
 FIELDS_LATTICE_GENUS = ["genera_basic.format", "genera_advanced.format"]
 FIELDS_LATTICE = ["lat.format"]
@@ -826,6 +826,8 @@ def write_all_of_sig_between_genera_basic(n_plus, n_minus, lb_det, ub_det):
         entries = [create_genus_entry(s) for s in syms]
         for genus in entries:
             fname = "genera_basic/%s" % genus['label']
+            if os.path.exists(fname):
+                os.remove(fname)
             write_entries_to_file([genus], fname)
 
 
