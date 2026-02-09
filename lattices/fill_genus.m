@@ -182,7 +182,15 @@ intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives, 
                 aut_group := aut_group[1];
                 lat["aut_group"] := GroupToString(aut_group : use_id:=false);
                 lat["aut_size"] := #aut_group;
-                lat["festi_veniani_index"] := #aut_group div disc_aut_size;
+                // double checking, but also useful for festi-veniani
+                LD := Dual(L : Rescale:=false);
+                discL, quo := LD/L; 
+                disc_aut := AutomorphismGroup(discL);
+                assert disc_aut_size eq #disc_aut;
+                assert disc_invs eq Invariants(discL);
+                gens_disc := [discL.i : i in [1..Ngens(discL)]];
+                im_aut := [hom< discL -> discL | [quo(x@@quo*ChangeRing(alpha, Rationals())): x in gens_disc]> : alpha in Generators(aut_group)];
+                lat["festi_veniani_index"] := disc_aut_size div #sub<disc_aut | im_aut>;
                 if CanIdentifyGroup(#aut_group) then
                     Aid := IdentifyGroup(aut_group);
                     lat["aut_label"] := Sprintf("%o.%o", Aid[1], Aid[2]);
