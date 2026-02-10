@@ -270,7 +270,7 @@ intrinsic FillGenus(label::MonStgElt : genus_reps_func := GenusRepresentatives, 
     // 4. dual theta series
     // 5. arbitrary tiebreaker
     // TODO: Sort reps according to canonical form?
-    perm := [1..#lats];
+    // perm := [1..#lats];
     if (n eq s) then
         Sort(~lats, cmp_lat, ~perm);
     end if;

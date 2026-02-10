@@ -16,7 +16,8 @@ def run_pipeline(n_plus, n_minus, log_ub_det):
     os.chdir("genera_basic")
     fnames = []
     for t in range(1, log_ub_det+1):
-        fnames += glob(f"{n}.{sig}." + t*"?" + ".*")
+        fnames += glob(f"{n}.{sig}." + t*"[0-9]" + ".*")
+    fnames += glob(f"{n}.{sig}.1" + log_ub_det*"0" + ".*")
     os.chdir(pwd)
     with open("genera_todo.txt", "a") as f:
         n_written = f.write("\n".join(fnames))
@@ -28,10 +29,12 @@ def run_pipeline(n_plus, n_minus, log_ub_det):
     fnames = []
     for t in range(1, log_ub_det+1):
         fnames += glob(f"genera_advanced/{n}.{sig}." + t*"[0-9]" + ".*")
+    fnames += glob(f"genera_advanced/{n}.{sig}.1" + log_ub_det*"0" + ".*")
     merge_files(fnames, f"tables/genera_advanced_{n}_{sig}_1_{ub_det}.tbl")
     fnames = []
     for t in range(1, log_ub_det+1):
         fnames += glob(f"lattice_data/{n}.{sig}." + t*"[0-9]" + ".*")
+    fnames += glob(f"lattice_data/{n}.{sig}." + log_ub_det*"0" + ".*")
     merge_files(fnames, f"tables/lattices_{n}_{sig}_1_{ub_det}.tbl", schema="lat")
     return
 
