@@ -110,6 +110,7 @@ intrinsic FillGenus(label::MonStgElt : timeout := 1800)
     advanced["adjacency_polynomials"] := "\\N";
     if genus_success then
         reps := reps[1];
+        vprintf FillGenus, 1 : "Number of genus representatives: %o\n", #reps;
         advanced["class_number"] := #reps;
         vprintf FillGenus, 1 : "Computing adjacency matrix for p = ";
         hecke_mats := AssociativeArray();
@@ -227,10 +228,23 @@ intrinsic FillGenus(label::MonStgElt : timeout := 1800)
             m := Minimum(L);
             lat["minimum"] := m;
             prec := Max(150, m+4);
-            lat["theta_series"] := Eltseq(ThetaSeries(L, prec - 1));
-            lat["theta_prec"] := prec;
-            lat["dual_theta_series"] := Eltseq(ThetaSeries(D, prec - 1));
-            minima, vecs := SuccessiveMinima(L); // for now we just throw vecs away
+            success, theta_series, elapsed := TimeoutCall(to_per_rep, ThetaSeries, <L, prec-1>, 1);
+            vprintf FillGenus, 1 : "Theta series computed in %o seconds\n", elapsed;
+            if success then 
+                lat["theta_series"] := Eltseq(theta_series[1]);
+                lat["theta_prec"] := prec;
+            end if;
+            success, dual_theta_series, elapsed := TimeoutCall(to_per_rep, ThetaSeries, <D, prec-1>, 1);
+            vprintf FillGenus, 1 : "Dual theta series computed in %o seconds\n", elapsed;
+            if success then 
+                lat["dual_theta_series"] := Eltseq(dual_theta_series[1]);
+            end if;
+            //success, minima, elapsed := TimeoutCall(to_per_rep, SuccessiveMinima, <L>, 2);
+            //vprintf FillGenus, 1 : "Successive minima computed in %o seconds\n", elapsed;
+            //if success then 
+            //lat["successive_minima"] := minima[1]; // For now, we throw away the vecs
+            //end if;
+            minima, vecs := SuccessiveMinima(L);
             lat["successive_minima"] := minima;
         end if;
         lat["dual_label"] := "\\N"; // set in next stage
