@@ -56,7 +56,14 @@ end function;
 function genus_reps_Magma(L)
     // The bound is set to infinity to avoid Magma printing an error message
     // without throwing a runtime error.
-    return GenusRepresentatives(L : Bound := Infinity());
+    if IsPositiveDefinite(GramMatrix(L)) then
+      return GenusRepresentatives(L : Bound := Infinity());
+    end if;
+    // due to some bugs in Magma, we convert to number field
+    LF := NumberFieldLattice(L);
+    reps := GenusRepresentatives(LF);
+    return [LatticeWithGram(ChangeRing(GramMatrix(r), Integers()) :
+			    CheckPositive := false) : r in reps];
 end function;
 
 function genus_reps_Logan(L)
