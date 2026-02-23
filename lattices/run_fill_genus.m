@@ -1,9 +1,9 @@
 // This file is used to find all of the representatives in a positive definite genus, along with some difficult to compute quantities about the genus itself.
 // Usage: magma -b label:=foo run_fill_genus.m
-// Batch: magma -b labels:=foo,bar,baz run_fill_genus.m
+// Batch: magma -b labels:=foo:bar:baz run_fill_genus.m
 //
 // Parallel across servers:
-//   xargs -n 100 < genera_todo.txt | tr ' ' ',' > genera_todo_chunked.txt
+//   xargs -n 100 < genera_todo.txt | tr ' ' ':' > genera_todo_chunked.txt
 //   parallel --sshloginfile servers.txt --joblog jobs.log --eta --resume \
 //     'cd ~/projects/k3s-lmfdb/lattices && magma -b labels:={} verbose:=0 run_fill_genus.m' \
 //     :::: genera_todo_chunked.txt > output.txt
@@ -13,7 +13,7 @@
 
 AttachSpec("lattices.spec");
 
-if not assigned verbose then verbose := 0; end if;
+if not assigned verbose then verbose := "0"; end if;
 SetVerbose("FillGenus", StringToInteger(verbose));
 
 if assigned labels then
