@@ -13,13 +13,15 @@
 
 AttachSpec("lattices.spec");
 
+import "aut-char.mag" : aut_faster;
+
 if assigned labels then
     label_list := Split(labels, ":");
 else
     label_list := [label];
 end if;
 
-function automorphism_group(label : timeout := 1800)
+function automorphism_group(label : timeout := 1800, alg := AutomorphismGroup)
     data := Split(Split(Read("genera_basic/" * label), "\n")[1], "|");
     basic_format := Split(Read("genera_basic.format"), "|");
     assert #data eq #basic_format;
@@ -42,20 +44,20 @@ function automorphism_group(label : timeout := 1800)
     gram := Matrix(K, n, eval rep);
     L := LWG(gram : CheckPositive := false);
     
-    success, aut_group, elapsed := TimeoutCall(timeout, AutomorphismGroup, <L>, 1);
+    success, aut_group, elapsed := TimeoutCall(timeout, alg, <L>, 1);
     if success then
-        printf "Automorphism group computed in %o seconds\n", elapsed;
+        printf "Automorphism group for %o computed in %o seconds\n", label, elapsed;
         aut_group := aut_group[1];
         return aut_group;
     end if;
-    error if not success, "Failed to compute automorphism group in %o seconds", elapsed;
+    error if not success, "Failed to compute automorphism group for %o in %o seconds", label, elapsed;
 end function;
 
 procedure() // forcing magma to read the full input before forking
 failed := [];
 for l in label_list do
     try
-        G := automorphism_group(l);
+        G := automorphism_group(l : alg := aut_faster);
     catch e
         printf "ERROR: %o: %o\n", l, e;
         Append(~failed, l);
