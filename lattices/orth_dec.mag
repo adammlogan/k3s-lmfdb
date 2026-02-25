@@ -93,7 +93,8 @@ function orth_dec(lat: norm_bd := Infinity())
           if sub_rs eq rs then
             orig_cps := [sub<lat|[v*Transpose(lll): v in Basis(r)]>: r in components];
             try grams := [GramMatrix(i): i in orig_cps]; catch e "failed on lattice", lat; error "foo"; end try;
-            return orig_cps, grams;
+            done := true; ret_val := orig_cps;
+            break l;
           end if;
         end if;
       end if;
