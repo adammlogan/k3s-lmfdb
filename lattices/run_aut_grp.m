@@ -1,4 +1,4 @@
-// This file is used to find all of the representatives in a positive definite genus, along with some difficult to compute quantities about the genus itself.
+// This file is used to find the automorphism group of a lattice in a positive definite genus.
 // Usage: magma -b label:=foo run_aut_grp.m
 // Batch: magma -b labels:=foo:bar:baz run_aut_grp.m
 //
@@ -13,6 +13,12 @@
 // Check timings: cut -f 7 -d ' ' output.txt  | sort -n | tail
 
 AttachSpec("lattices.spec");
+
+if not assigned verbose then verbose := "0"; end if;
+SetVerbose("FillGenus", StringToInteger(verbose));
+
+if not assigned timeout then timeout := "60"; end if;
+timeout := StringToInteger(timeout);
 
 if assigned labels then
     label_list := Split(labels, ":");

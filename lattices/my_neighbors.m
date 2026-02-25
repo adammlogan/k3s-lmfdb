@@ -1,5 +1,5 @@
 Z := Integers();
-import "/usr/local/magma/package/Lattice/Lat/neighbors.m":BinaryNeighbors,SetDepth,TwoNeighbors,Adjust,IsNonsingularVector,AdjoinNeighbor;
+import !"Lattice/Lat/neighbors.m":BinaryNeighbors,SetDepth,TwoNeighbors,Adjust,IsNonsingularVector,AdjoinNeighbor;
 
 function newTwoNeighbors(L, dep)
   Lambda := [ Parent(L) | ]; 
