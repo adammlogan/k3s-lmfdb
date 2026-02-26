@@ -1,12 +1,17 @@
 // function to enumerate a genus using canonical forms
 Z := Integers();
 Q := Rationals();
-Attach("aut-char.mag");
+/*Attach("aut-char.mag");
+// import "aut-char.mag":AutomorphismGroupFaster;
 Attach("orth_dec.mag");
+// import "orth_dec.mag":OrthogonalComplementFaster;
 // if assigned orth_comp then delete orth_comp; end if;
 // import "orth_dec.mag": orth_comp;
 Attach("canonical_form.m");
+// import "canonical_form.m":CanonicalForm;
 Attach("my_neighbors.m");
+// import "my_neighbors.m":newNeighbours;*/
+// AttachSpec("lattices.spec");
 
 // A very quick lattice hash.  This is better with a faster
 // OrthogonalDecomposition (cf. my email)
@@ -61,12 +66,12 @@ Zx := PolynomialRing(Z);
 // things I was hoping would distinguish lattices
 // SuccessiveMinima doesn't work, because Magma crashes when it might be useful
 // this does distinguish things, but may not make the code faster
-function genera_shortest(l)
+/*function genera_shortest(l)
   sv := ShortestVectors(l);
   ocsv := [LatticeWithGram(GramMatrix(OrthogonalComplementFaster(r,sub<r|Eltseq(i)>))): i in ShortestVectors(l)] where r is RSpace(Z,Rank(l),GramMatrix(l));
   gens := {*Genus(i): i in ocsv*};
   return gens;
-end function;
+end function;*/
 
 // https://www.math.rwth-aachen.de/~Gabriele.Nebe/LATTICES/bacher.html
 // doesn't seem to help much
@@ -243,7 +248,7 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
       h := hash(lat);
       if h notin known_hashes then
         Include(~done,lat);
-        "adding lattice", #done, "with new hash";
+        vprint Genus,2: "adding lattice", #done, "with new hash";
         Append(~done_hashes,h);
         mass_left -:= 1/#aut_gp_fn(lat);
         if not silent then <<a,b,c> where a,b,c is root_sub(lat),RealField(5)!(mass_left/mass), #lat`AutomorphismGroup>; end if;
@@ -288,10 +293,10 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
       end for;
       if is_new then
         Include(~done,lat);
-        "adding lattice", #done, "with existing hash", hash_ind;
-        "hashes matched:", [x: x in [1..#done_hashes]|done_hashes[x] eq h];
+        vprint Genus, 2: "adding lattice", #done, "with existing hash", hash_ind;
+        // "hashes matched:", [x: x in [1..#done_hashes]|done_hashes[x] eq h];
         isom_lat := [x: x in [1..#done-1]|IsIsomorphic(done[x],lat)];
-        if #isom_lat gt 0 then
+        if #isom_lat gt 0 then // this should never happen
           "??? lattice already known";
           isom_cfs := [can_forms[i]: i in isom_lat];
           "canonical forms match:", [cf eq i: i in isom_cfs];
@@ -318,8 +323,8 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
   return done, done_hashes;
 end function;
 
-/* intrinsic GenusRepresentativesFaster(pd::Lat : bd := Infinity(), p := 2, done := {@@}, silent := false, aut_gp_fn := AutomorphismGroupFaster, nb_fn := newNeighbours, cf_fn := func<x|CanonicalForm(GramMatrix(x))>, hash := easy_hash, thorough := true, find_canonical := false) -> SeqEnum
+intrinsic GenusRepresentativesFaster(pd::Lat : bd := Infinity(), p := 2, done := {@@}, silent := false, aut_gp_fn := AutomorphismGroupFaster, nb_fn := newNeighbours, cf_fn := func<x|CanonicalForm(GramMatrix(x))>, hash := easy_hash, thorough := true, find_canonical := false) -> SeqEnum
 {Find the representatives of the genus of the lattice pd.}
     return list_genus(pd: bd := bd, p := p, done := done, silent := silent, aut_gp_fn := aut_gp_fn, nb_fn := nb_fn, cf_fn := cf_fn, hash := hash, thorough := thorough, find_canonical := find_canonical);
 end intrinsic;
-*/
+
