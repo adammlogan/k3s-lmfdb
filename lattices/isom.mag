@@ -153,7 +153,7 @@ function isom_graph(lg1,l2)
         std_od2 := [LatticeWithGram(GramMatrix(i)): i in od2];
         back_od2 := [func<x|&+[x[j]*Basis(od2[i])[j]: j in [1..Dimension(od2[i])]]>: i in [1..#od2]];
         rk1 := {*Rank(i[1]): i in od1_emb*};
-        rk2 := {*Rank(i[2]): i in od2*};
+        rk2 := {*Rank(i): i in od2*};
         if rk1 ne rk2 then
           vprint Lattice,2: "genera do not match";
           is_isom := false; isom := Identity(GL(Rank(l2),Z));
