@@ -75,7 +75,7 @@ function discgp(rs)
   return dg,dgto,q,ag;
 end function;
 
-basic_hash := func<l|Rank(l),Moduli(discgp(l))>;
+basic_hash := func<l|<Rank(l),Moduli(discgp(l))>>;
 // r, s -> n, r
 function lift_isom(l1,sl1_bas,l2,sl2,isom_12)
   n := Rank(l1); r := #sl1_bas;
@@ -193,6 +193,8 @@ function isom_graph(lg1,l2)
   ii := initial(lg1);
   drop_ii := lg1-ii;
   l1 := rep{x[1]: x in Support(lg1)|VertexSet(lg1)!x eq ii};
+  // "*** entering isom_graph for", Eltseq(GramMatrix(l1)),Eltseq(GramMatrix(l2));
+  if obv_different(l1,l2) then return false, Identity(GL(Rank(l2),Z)); end if;
   if #Vertices(lg1) eq 1 then
     vprint Lattice,1: "falling back on Magma built-in for lattice of rank", Rank(l2);
     // remembering to reverse the order

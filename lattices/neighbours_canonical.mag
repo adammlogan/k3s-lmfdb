@@ -103,7 +103,6 @@ function pairs_to_n(l: n := 3)
   return pairs;
 end function;
 
-// bd := Infinity(); p := 2; done := {@@}; silent := false; aut_gp_fn := AutomorphismGroupFaster; nb_fn := newNeighbours; cf_fn := func<x|CanonicalForm(GramMatrix(x))>; hash := easy_hash; find_canonical := false;
 stoi := func<l,i|sub<l|[x[1]: x in ShortVectors(l,i)]>>;
 easy_hash := func<x|<IsEven(x) select "even" else "odd",a,b,c,d,/*#AutomorphismGroupFaster(x),*/ThetaSeries(x,(IsEven(x) select 100 div Dimension(x) else 50 div Dimension(x))),ThetaSeries(dl,(IsEven(dl) select 100 div Dimension(dl) else 50 div Dimension(dl)))> where dl is scaled_dual(x) where a,b,c is root_sub(x) where d is [Rank(stoi(x,i)): i in [1..6]]>;
 hash_bv := func<x|Append(easy_hash(x),bv(x))>;
@@ -302,7 +301,8 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
           if done_hashes[i] eq h then
             if not IsDefined(aut_graphs,i) then
               vprint Genus, 2: "creating new automorphism graph structure for hash", hash_ind;
-              aut_graphs[i] := aut_graph(done[i]:orth_bd := 6);
+              // "Gram matrix:", Eltseq(GramMatrix(done[i]));
+              aut_graphs[i] := aut_graph(done[i]); // was :orth_bd := 6;
             end if;
             if isom_graph(aut_graphs[i],lat) then
               is_new := false;

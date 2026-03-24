@@ -54,6 +54,7 @@ end function;
 
 // find integer solutions to a positive definite quadratic
 function solve_quad(pol)
+  // "*** entering solve_quad";
   tr,sol := reduce_quad(pol);
   rk := Rank(Parent(pol));
   lcm := LCM([Denominator(i): i in Eltseq(sol)]);
@@ -74,6 +75,7 @@ end function;
 // in any case, it seems to work, but I need to test it and also look at speed
 // then I still need to integrate with isom.mag
 function solve_quad_recursive(sch,genlift,n,r,lat:only_one := false, lat_out := lat)
+  // "*** entering solve_quad_recursive", sch, genlift, lat;
   Anr := AmbientSpace(sch);
   Qr := PolynomialRing(Q,r);
   Ar := Spec(Qr);
@@ -82,7 +84,7 @@ function solve_quad_recursive(sch,genlift,n,r,lat:only_one := false, lat_out := 
   assert Dimension(Anr) eq n*r;
   if r eq 1 then
     assert Dimension(sch) le 0;
-    pts := {@x: x in RationalPoints(sch)|forall{i: i in Eltseq(x)|i in Z} and x[#Eltseq(x)] in {-1,1} @};
+    pts := {@x: x in RationalPoints(sch)|forall{i: i in Eltseq(x)|i in Z}/* and x[#Eltseq(x)] in {-1,1}*/ @};// pts;
     lifts := [GL(n,Z)|Evaluate(genlift,Eltseq(i)): i in pts];
   else
     vprintf Lattice,2: ".";
@@ -180,6 +182,7 @@ end function;
 // we want to lift it to a block matrix [A,0;B,C] where B, C are arbitrary
 // except that det C = +-1
 function lift(lat,autmat: only_one := false)
+  // "*** entering lift to try to lift automorphism", Eltseq(autmat), "of lattice", Eltseq(GramMatrix(lat));
   subdim := Nrows(autmat);
   dim := Rank(lat);
   nr := dim-subdim; // "new rank"
@@ -414,6 +417,7 @@ forward aut_faster;
 
 function aut_max_ind(lat,d: max_ind := 10, aut_sub := false,force := false)
   if assigned lat`AutomorphismGroup and not force then return lat`AutomorphismGroup; end if;
+  // "entering aut_max_ind with lattice", Eltseq(GramMatrix(lat)), "and subdimension", d;
   // this is a bad case because Magma doesn't have GL_0
   if d eq Rank(lat) then return AutomorphismGroup(lat); end if;
   gm := GramMatrix(lat);
@@ -583,6 +587,7 @@ end function;
 // return values are the lattice(s) we decompose into or reduce to
 function aut_faster(lat: use_orth_dec := true, orth_bd := 10, codim_bd := 4)
   if assigned lat`AutomorphismGroup then return lat`AutomorphismGroup; end if;
+  // "entering aut_faster with Gram matrix", Eltseq(GramMatrix(lat));
   if use_orth_dec then
     od := OrthogonalDecompositionFaster(lat: norm_bd := orth_bd*(IsEven(lat) select 2 else 1));
     assert Determinant(Matrix(&cat [Basis(i): i in od])) in [1,-1];
@@ -648,7 +653,8 @@ end function;
 // subgroup and the kernel, which we can use to extend isomorphisms from
 // sublattices.
 
-function aut_graph(lat: hom_up := [Eltseq(i): i in Rows(IdentityMatrix(Z,Rank(lat)))], use_orth_dec := true, orth_bd := 10, sub_bd := 10, codim_bd := 4)
+function aut_graph(lat: hom_up := [Eltseq(i): i in Rows(IdentityMatrix(Z,Rank(lat)))], use_orth_dec := true, orth_bd := Ceiling(150/Rank(lat)), sub_bd := 10, codim_bd := 4)
+  // "*** entering aut_graph for lattice", Eltseq(GramMatrix(lat));
   gr := Digraph<{<lat,hom_up>}|>;
   used_od := false;
   if use_orth_dec then
@@ -660,7 +666,7 @@ function aut_graph(lat: hom_up := [Eltseq(i): i in Rows(IdentityMatrix(Z,Rank(la
       vprint Lattice, 1: "recursively building graphs of components";
       for i in od do
         li := LatticeWithGram(GramMatrix(i));
-        ag := aut_graph(li: hom_up := [Eltseq(r): r in Rows(Matrix(Basis(i)))], use_orth_dec := use_orth_dec, orth_bd := orth_bd);
+        ag := aut_graph(li: hom_up := [Eltseq(r): r in Rows(Matrix(Basis(i)))], use_orth_dec := use_orth_dec); // was: orth_bd := orth_bd);
         Append(~od_grs,ag);
       end for;
       vprint Lattice, 1: "assembling them to find the automorphism group of the lattice";
@@ -701,7 +707,7 @@ function aut_graph(lat: hom_up := [Eltseq(i): i in Rows(IdentityMatrix(Z,Rank(la
       // information of what can be lifted and the kernel
       latkeep := LatticeWithGram(GramMatrix(keep));
       lkhom := [Eltseq(r): r in Rows(Matrix(Basis(keep)))];
-      lkgr := aut_graph(latkeep: hom_up := lkhom, use_orth_dec := use_orth_dec, orth_bd := orth_bd);
+      lkgr := aut_graph(latkeep: hom_up := lkhom, use_orth_dec := use_orth_dec); // was: orth_bd := orth_bd;
       new_v := {<lat,hom_up>} join Support(lkgr);
       newgr := Digraph<new_v|>;
       // this isn't quite right
