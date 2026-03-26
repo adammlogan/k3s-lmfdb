@@ -222,7 +222,7 @@ function list_genus(pd: bd := Infinity(), p := 2, done := {@@}, silent := false,
 
   if use_hash2 then
     "using variable hash";
-    hash := func<x|var_hash(x,d)> where d is Ceiling(Sqrt(Dimension(ThetaSeriesModularFormSpace(pd))));
+    hash := func<x|var_hash(x,d)> where d is Ceiling(Dimension(ThetaSeriesModularFormSpace(pd))^(2/n)*Determinant(GramMatrix(pd))^(1/n)) where n is Rank(pd);
   end if;
   _ := aut_gp_fn(pd);
   g := Genus(pd);
